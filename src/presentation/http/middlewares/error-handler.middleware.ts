@@ -1,10 +1,24 @@
 import type { ErrorRequestHandler } from 'express';
-import { NotImplementedError } from '../../../domain/errors/not-implemented.error.js';
-import { UnauthorizedError } from '../../../domain/errors/unauthorized.error.js';
+import {
+  ForbiddenError, 
+  NotFoundError, 
+  NotImplementedError, 
+  UnauthorizedError 
+} from '../../../domain/errors';
 
 export const errorHandler: ErrorRequestHandler = (error, _request, response, _next) => {
   if (error instanceof UnauthorizedError) {
     response.status(401).end();
+    return;
+  }
+
+  if(error instanceof ForbiddenError) {
+    response.status(403).end();
+    return;
+  }
+
+  if(error instanceof NotFoundError) {
+    response.status(404).end();
     return;
   }
 
