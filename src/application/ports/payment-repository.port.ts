@@ -1,4 +1,4 @@
-import type { PaymentLog } from '../../domain/entities/payment-log.js';
+import type { PaymentLog } from '../../domain/entities';
 
 export interface PaymentRepository {
   findByUserId(userId: string): Promise<PaymentLog[]>;

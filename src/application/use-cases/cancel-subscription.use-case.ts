@@ -1,5 +1,5 @@
-import type { SubscriptionOutput } from '../dtos/subscription.dto.js';
-import { NotImplementedError } from '../../domain/errors/not-implemented.error.js';
+import type { SubscriptionOutput } from '../dtos';
+import { NotImplementedError } from '../../domain/errors';
 
 export class CancelSubscriptionUseCase {
   execute(_userId: string): Promise<SubscriptionOutput> {

@@ -1,5 +1,5 @@
-import type { CheckoutSubscriptionInput, SubscriptionOutput } from '../dtos/subscription.dto.js';
-import { NotImplementedError } from '../../domain/errors/not-implemented.error.js';
+import type { CheckoutSubscriptionInput, SubscriptionOutput } from '../dtos';
+import { NotImplementedError } from '../../domain/errors';
 
 export class CheckoutSubscriptionUseCase {
   execute(_input: CheckoutSubscriptionInput): Promise<SubscriptionOutput> {

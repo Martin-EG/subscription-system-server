@@ -1,6 +1,6 @@
-import type { SubscriptionRepository } from '../../../application/ports/subscription-repository.port.js';
-import type { Subscription } from '../../../domain/entities/subscription.js';
-import { NotImplementedError } from '../../../domain/errors/not-implemented.error.js';
+import type { SubscriptionRepository } from '../../../application/ports';
+import type { Subscription } from '../../../domain/entities';
+import { NotImplementedError } from '../../../domain/errors';
 
 export class PrismaSubscriptionRepository implements SubscriptionRepository {
   findById(_id: string): Promise<Subscription | null> {

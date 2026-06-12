@@ -1,4 +1,4 @@
-import type { Subscription } from '../../domain/entities/subscription.js';
+import type { Subscription } from '../../domain/entities';
 
 export interface SubscriptionRepository {
   findById(id: string): Promise<Subscription | null>;

@@ -1,6 +1,6 @@
-import type { SubscriptionQuery } from '../dtos/subscription.dto.js';
-import type { Subscription } from '../../domain/entities/subscription.js';
-import { NotImplementedError } from '../../domain/errors/not-implemented.error.js';
+import type { SubscriptionQuery } from '../dtos';
+import type { Subscription } from '../../domain/entities';
+import { NotImplementedError } from '../../domain/errors';
 
 export class GetSubscriptionsUseCase {
   execute(_query: SubscriptionQuery): Promise<Subscription[]> {

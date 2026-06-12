@@ -1,15 +1,17 @@
 import express from 'express';
 import swaggerUi from 'swagger-ui-express';
-import type { AuthProvider } from './application/ports/auth-provider.port.js';
-import { UnauthorizedError } from './domain/errors/unauthorized.error.js';
-import { createSupabaseAuthProvider } from './infrastructure/auth/supabase-auth.provider.js';
+import type { AuthProvider } from './application/ports';
+import { UnauthorizedError } from './domain/errors';
+import { createSupabaseAuthProvider } from './infrastructure/auth';
 import { env } from './infrastructure/config/env.js';
-import { errorHandler } from './presentation/http/middlewares/error-handler.middleware.js';
+import { errorHandler } from './presentation/http/middlewares';
 import { openApiDocument } from './presentation/http/openapi.js';
-import { createAuthRouter } from './presentation/http/routes/auth.routes.js';
-import { healthRouter } from './presentation/http/routes/health.routes.js';
-import { paymentRouter } from './presentation/http/routes/payment.routes.js';
-import { subscriptionRouter } from './presentation/http/routes/subscription.routes.js';
+import { 
+  createAuthRouter,
+  healthRouter,
+  paymentRouter,
+  subscriptionRouter 
+} from './presentation/http/routes';
 
 export interface AppDependencies {
   authProvider?: AuthProvider;
