@@ -1,0 +1,158 @@
+# Sistema de Suscripciones
+
+[English version](README.en.md)
+
+Sistema de Suscripciones es la base de backend para una empresa que lanzará un servicio de suscripciones premium. Su objetivo es soportar un servicio y un portal donde los usuarios puedan suscribirse a un plan, gestionar renovaciones y cancelaciones, consultar su suscripción actual y obtener o perder acceso a funcionalidades premium según sus permisos.
+
+El sistema está diseñado para coordinar en el futuro el procesamiento de pagos, el ciclo de vida de las suscripciones, el acceso premium, la auditoría de pagos y las notificaciones asíncronas. Los administradores también podrán consultar la información de suscripciones y pagos de todos los usuarios.
+
+Actualmente, este repositorio es una base arquitectónica. Define los contratos de la API, los modelos de dominio, la configuración de la base de datos y los límites de las integraciones, pero intencionalmente no contiene lógica de negocio. Las operaciones de suscripciones y pagos responden por ahora con `501 Not Implemented`.
+
+## Stack Tecnológico
+
+- **Node.js 22 LTS y TypeScript:** Node.js es apropiado para una API que coordina
+  operaciones de base de datos, proveedores de pago, colas y servicios de notificaciones, ya que estas cargas dependen principalmente de operaciones de entrada y salida.
+  TypeScript agrega contratos estáticos entre el dominio, los casos de uso y los
+  adaptadores de infraestructura.
+- **Express:** proporciona una capa HTTP pequeña y madura sin imponer una arquitectura de aplicación. Esto permite mantener explícitos los límites de Clean Architecture y aislar el framework en la capa de presentación.
+- **Supabase y PostgreSQL:** Supabase proporciona PostgreSQL administrado, autenticación y Row Level Security, reduciendo la carga operativa inicial sin abandonar una base de datos relacional estándar. PostgreSQL es adecuado para datos transaccionales de suscripciones, pagos e idempotencia.
+- **Prisma 7:** proporciona un cliente de base de datos tipado y mantiene el modelo de la aplicación alineado con el esquema de PostgreSQL.
+- **Jest y Supertest:** permiten crear pruebas unitarias y de integración HTTP.
+- **ESLint y Prettier:** mantienen la calidad y el formato consistente del código.
+- **Swagger UI y OpenAPI:** documentan el contrato HTTP y permiten explorar los endpoints placeholder.
+- **Docker:** proporciona una imagen de ejecución reproducible y una base para el
+  despliegue.
+
+## Clean Architecture
+
+```text
+src/
+|-- domain/          Entidades y errores de dominio
+|-- application/     Casos de uso placeholder, DTOs y puertos
+|-- infrastructure/  Prisma, configuración y adaptadores de Kafka y Resend
+|-- presentation/    Controladores, middleware y rutas de Express
+|-- app.ts            Composición de la aplicación HTTP
+`-- main.ts           Punto de entrada del proceso
+```
+
+Las dependencias apuntan hacia el interior: presentación e infraestructura dependen de
+los contratos de aplicación y dominio. La capa de dominio no importa Express, Prisma ni
+servicios externos.
+
+## Configuración Local
+
+Requisitos: Node.js 22 y npm.
+
+```bash
+npm install
+cp .env.example .env
+npm run prisma:generate
+npm run dev
+```
+
+En PowerShell, utiliza `Copy-Item .env.example .env` en lugar de `cp`.
+
+El proyecto de Supabase no es necesario para iniciar el scaffold de la aplicación. Una vez creado, reemplaza `DATABASE_URL` y `DIRECT_URL` en `.env`.
+
+## Configuración de Supabase
+
+La configuración está dividida intencionalmente en dos pasos idempotentes. Supabase administra el esquema `auth`, por lo que las cuentas reales se crean mediante la API administrativa oficial en lugar de insertar filas directamente en `auth.users`.
+
+1. Abre el SQL Editor de Supabase y ejecuta
+   [`supabase/setup.sql`](supabase/setup.sql).
+2. Agrega `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` a `.env`.
+3. Crea o actualiza los usuarios de demostración:
+
+```bash
+npm run supabase:seed-users
+```
+
+Para una base de datos creada previamente con la primera versión del esquema, ejecuta una vez en el SQL Editor:
+[`supabase/migrations/20260612_subscription_history_and_idempotency.sql`](supabase/migrations/20260612_subscription_history_and_idempotency.sql)
+
+- Crea la tabla dedicada `idempotency_keys`.
+- Migra los valores de idempotencia existentes antes de eliminar la columna anterior.
+- Agrega fechas del ciclo de vida y campos de cancelación a las suscripciones.
+- Renombra la referencia externa de suscripción a `stripe_subscription_id`.
+- Crea una suscripción gratuita activa para cada usuario sin suscripción vigente.
+
+El SQL crea las tablas públicas, enums, índices, el trigger de sincronización de perfiles, las políticas RLS de lectura y los siguientes planes:
+
+| Plan            | Precio | Moneda | Periodo de cobro |
+| --------------- | -----: | ------ | ---------------- |
+| Gratis          |      0 | MXN    | `NULL`           |
+| Premium mensual |     99 | MXN    | `MONTHLY`        |
+| Premium anual   |    999 | MXN    | `YEARLY`         |
+
+El seed de Auth crea cuentas de demostración confirmadas y puede ejecutarse nuevamente de forma segura:
+
+| Rol   | Nombre   | Correo                       | Contraseña |
+| ----- | -------- | ---------------------------- | ---------- |
+| ADMIN | John Doe | `admin.john@subsriptive.com` | `Demo123`  |
+| USER  | Jane Doe | `jane.doe@subsdemo.com`      | `Demo123`  |
+
+Estas credenciales son únicamente para entornos locales o de demostración. La clave service-role otorga acceso administrativo y nunca debe incluirse en Git ni exponerse en un navegador.
+
+## Comandos
+
+```bash
+npm run dev
+npm run build
+npm run typecheck
+npm run lint
+npm test
+npm run test:coverage
+npm run prisma:validate
+npm run supabase:seed-users
+```
+
+Swagger UI está disponible en `http://localhost:3000/docs` y el estado de salud en
+`http://localhost:3000/health`.
+
+## Endpoints Placeholder
+
+| Método | Ruta                             | Propósito                         |
+| ------ | -------------------------------- | --------------------------------- |
+| POST   | `/api/v1/subscriptions/checkout` | Activar una suscripción           |
+| PATCH  | `/api/v1/subscriptions/cancel`   | Cancelar una suscripción          |
+| PATCH  | `/api/v1/subscriptions/renew`    | Renovar una suscripción           |
+| GET    | `/api/v1/subscriptions`          | Consultar/listar suscripciones    |
+| GET    | `/api/v1/subscriptions/:userId`  | Consultar suscripción por usuario |
+| GET    | `/api/v1/payments`               | Consultar registros de pagos      |
+
+La autenticación, autorización, validación, transacciones, idempotencia, reintentos, publicación en Kafka y envío mediante Resend todavía no están implementados.
+
+## Prisma y Supabase
+
+El esquema de Prisma refleja las tablas creadas por `supabase/setup.sql`. La columna `users.id` referencia al usuario correspondiente de Supabase Auth y `billing_period` permite `NULL` para el plan gratuito. Los planes de pago utilizan el enum `BillingPeriod` con `MONTHLY` y `YEARLY`. Cada nuevo usuario de Auth recibe una suscripción gratuita activa, mientras que la idempotencia del checkout se almacena por separado en `idempotency_keys`.
+
+## Hoja de Ruta de Despliegue y Escalabilidad
+
+El repositorio incluye un `Dockerfile` multietapa inicial y `compose.yaml`. Estos archivos proporcionan una imagen reproducible, pero la estrategia de producción se terminará de definir conforme se implementen la lógica de negocio y las integraciones externas.
+
+El modelo de despliegue previsto es:
+
+- Ejecutar la API en contenedores Docker sin estado detrás de un balanceador de carga.
+- Escalar horizontalmente las réplicas sin guardar sesiones o estado de solicitudes en memoria.
+- Utilizar el pool de conexiones de Supabase PostgreSQL y límites razonables por
+  instancia.
+- Mover notificaciones de pago y otros trabajos no bloqueantes a consumidores de Kafka, permitiendo escalar API y workers de manera independiente.
+- Agregar health checks, readiness checks y apagado ordenado para la orquestación.
+- Guardar secretos en la plataforma de despliegue, no en imágenes Docker ni en Git.
+- Incorporar logs estructurados, métricas, trazas y alertas antes de producción.
+
+El pipeline futuro de CI/CD deberá:
+
+1. Instalar dependencias con `npm ci`.
+2. Ejecutar validación de formato, lint, tipos y pruebas con cobertura.
+3. Validar el esquema Prisma y las migraciones SQL.
+4. Construir y analizar la imagen Docker.
+5. Publicar imágenes inmutables etiquetadas con el SHA del commit.
+6. Desplegar primero en un entorno de staging.
+7. Ejecutar smoke tests y validaciones de migración antes de producción.
+
+Esta sección es una dirección arquitectónica provisional. Las políticas concretas de hosting, orquestación, rollback, migración y releases se actualizarán cuando los flujos de pagos, colas y notificaciones estén operativos.
+
+## Integraciones Pendientes
+
+Los adaptadores de Kafka y Resend existen únicamente como placeholders comentados con `implement later`. Sus clientes todavía no están instalados ni inicializados.

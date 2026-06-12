@@ -1,0 +1,11 @@
+services:
+  api:
+    build:
+      context: .
+    env_file:
+      - .env
+    ports:
+      - '3000:3000'
+
+  # implement later:
+  # Add Kafka and its required broker services when asynchronous events are implemented.
