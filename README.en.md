@@ -113,6 +113,32 @@ The Auth seed creates confirmed demo accounts and can be safely run again:
 These credentials are for local/demo environments only. The service-role key grants
 administrative access and must never be committed or exposed to a browser.
 
+## Authentication
+
+Login uses Supabase Auth with email and password:
+
+```http
+POST /api/v1/auth/login
+Content-Type: application/json
+
+{
+  "email": "jane.doe@subsdemo.com",
+  "password": "Demo123"
+}
+```
+
+The application requires `SUPABASE_URL` and `SUPABASE_ANON_KEY` to authenticate users. A
+successful response includes `access_token`, `expires_in` and basic user information.
+The same JWT is set in an `access_token` cookie with `HttpOnly`, `SameSite=Strict` and
+`Secure` in production.
+
+The `authenticate` middleware validates `Authorization: Bearer <token>` headers through
+Supabase and stores the verified user in `response.locals.authUser`. Placeholder routes
+do not use this middleware yet.
+
+Invalid credentials or invalid JWTs return only status `401` with an empty body. Login
+rate limiting is recorded as technical debt and must be implemented before production.
+
 ## Commands
 
 ```bash
@@ -133,6 +159,7 @@ Swagger UI is available at `http://localhost:3000/docs` and health status at
 
 | Method | Path                             | Purpose                   |
 | ------ | -------------------------------- | ------------------------- |
+| POST   | `/api/v1/auth/login`             | Authenticate and get JWT  |
 | POST   | `/api/v1/subscriptions/checkout` | Activate subscription     |
 | PATCH  | `/api/v1/subscriptions/cancel`   | Cancel subscription       |
 | PATCH  | `/api/v1/subscriptions/renew`    | Renew subscription        |

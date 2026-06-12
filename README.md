@@ -93,6 +93,33 @@ El seed de Auth crea cuentas de demostración confirmadas y puede ejecutarse nue
 
 Estas credenciales son únicamente para entornos locales o de demostración. La clave service-role otorga acceso administrativo y nunca debe incluirse en Git ni exponerse en un navegador.
 
+## Autenticación
+
+El login utiliza Supabase Auth con correo y contraseña:
+
+```http
+POST /api/v1/auth/login
+Content-Type: application/json
+
+{
+  "email": "jane.doe@subsdemo.com",
+  "password": "Demo123"
+}
+```
+
+La aplicación requiere `SUPABASE_URL` y `SUPABASE_ANON_KEY` para autenticar usuarios. Una
+respuesta exitosa incluye `access_token`, `expires_in` e información básica del usuario.
+El mismo JWT se establece en una cookie `access_token` con `HttpOnly`,
+`SameSite=Strict` y `Secure` en producción.
+
+El middleware `authenticate` valida encabezados `Authorization: Bearer <token>` mediante
+Supabase y guarda el usuario verificado en `response.locals.authUser`. Las rutas
+placeholder todavía no utilizan este middleware.
+
+Las credenciales inválidas o los JWT no válidos responden únicamente con estado `401` y
+sin cuerpo. El rate limiting del login queda registrado como deuda técnica y deberá
+implementarse antes de producción.
+
 ## Comandos
 
 ```bash
@@ -113,6 +140,7 @@ Swagger UI está disponible en `http://localhost:3000/docs` y el estado de salud
 
 | Método | Ruta                             | Propósito                         |
 | ------ | -------------------------------- | --------------------------------- |
+| POST   | `/api/v1/auth/login`             | Autenticar y obtener un JWT       |
 | POST   | `/api/v1/subscriptions/checkout` | Activar una suscripción           |
 | PATCH  | `/api/v1/subscriptions/cancel`   | Cancelar una suscripción          |
 | PATCH  | `/api/v1/subscriptions/renew`    | Renovar una suscripción           |
