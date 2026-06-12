@@ -1,4 +1,8 @@
-import { paginationSchema } from '../../../../src/presentation/http/schemas/subscriptions.schemas';
+import {
+  checkoutSubscriptionSchema, 
+  paginationSchema,
+  idempotencyKeySchema
+} from '../../../../src/presentation/http/schemas/subscriptions.schemas';
 
 describe('paginationSchema', () => {
   it('applies pagination defaults', () => {
@@ -22,5 +26,72 @@ describe('paginationSchema', () => {
     { page: 'invalid', limit: '20' },
   ])('rejects invalid pagination: %p', (query) => {
     expect(paginationSchema.safeParse(query).success).toBe(false);
+  });
+});
+
+describe('checkoutSubscriptionSchema', () => {
+  const query = {
+    planId: '550e8400-e29b-41d4-a716-446655440000',
+    paymentMethod: 'debit-card'
+  };
+
+  it('rejects when payment method is empty', () => {
+    expect(checkoutSubscriptionSchema.safeParse({
+      ...query,
+      paymentMethod: null
+    }).success).toBe(false);
+  });
+
+  it('rejects when payment method is not the expected type', () => {
+    expect(checkoutSubscriptionSchema.safeParse({
+      ...query,
+      paymentMethod: 5
+    }).success).toBe(false);
+  });
+
+  it('rejects when planId is empty', () => {
+    expect(checkoutSubscriptionSchema.safeParse({
+      ...query,
+      planId: null
+    }).success).toBe(false);
+  });
+
+  it('rejects when plan id is not the expected type', () => {
+    expect(checkoutSubscriptionSchema.safeParse({
+      ...query,
+      planId: 'not-an-uuid'
+    }).success).toBe(false);
+  });
+
+    it('rejects when plan id is not a UUID', () => {
+    expect(checkoutSubscriptionSchema.safeParse({
+      ...query,
+      planId: 5
+    }).success).toBe(false);
+  });
+
+  it('accepts valid data with the correct type', () => {
+    expect(checkoutSubscriptionSchema.safeParse(query).success).toBe(true);
+  });
+});
+
+describe('idempotencyKeySchema', () => {
+  it('accepts a valid idempotency key', () => {
+    const result = idempotencyKeySchema.safeParse('checkout-user-123-request-456');
+
+    expect(result.success).toBe(true);
+  });
+
+  it.each([
+    ['empty key', ''],
+    ['whitespace only', '  '],
+    ['more than 255 characters', 'a'.repeat(256) ],
+    ['number', 123],
+    ['undefined', undefined],
+    ['null', null]
+  ])('rejects %s', (_case, input) => {
+    const result = idempotencyKeySchema.safeParse(input);
+
+    expect(result.success).toBe(false);
   });
 });
