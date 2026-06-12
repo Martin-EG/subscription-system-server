@@ -34,6 +34,61 @@ export const openApiDocument = {
           user: { $ref: '#/components/schemas/AuthUser' },
         },
       },
+      SubscriptionPlan: {
+        type: 'object',
+        required: ['id', 'name', 'price', 'currency', 'billingPeriod'],
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          name: { type: 'string' },
+          price: { type: 'number', format: 'decimal', examples: [99] },
+          currency: { type: 'string', examples: ['MXN'] },
+          billingPeriod: {
+            type: ['string', 'null'],
+            enum: ['MONTHLY', 'YEARLY', null],
+          },
+        },
+      },
+      SubscriptionDetails: {
+        type: 'object',
+        required: [
+          'subscriptionId',
+          'userId',
+          'userName',
+          'userEmail',
+          'status',
+          'plan',
+          'startedAt',
+          'expiresAt',
+          'cancelAtPeriodEnd',
+        ],
+        properties: {
+          subscriptionId: { type: 'string', format: 'uuid' },
+          userId: { type: 'string', format: 'uuid' },
+          userName: { type: 'string' },
+          userEmail: { type: 'string', format: 'email' },
+          status: {
+            type: 'string',
+            enum: ['ACTIVE', 'PAST_DUE', 'CANCELLED', 'EXPIRED'],
+          },
+          plan: { $ref: '#/components/schemas/SubscriptionPlan' },
+          startedAt: { type: 'string', format: 'date-time' },
+          expiresAt: { type: ['string', 'null'], format: 'date-time' },
+          cancelAtPeriodEnd: { type: 'boolean' },
+        },
+      },
+      PaginatedSubscriptions: {
+        type: 'object',
+        required: ['data', 'page', 'limit', 'total'],
+        properties: {
+          data: {
+            type: 'array',
+            items: { $ref: '#/components/schemas/SubscriptionDetails' },
+          },
+          page: { type: 'integer', minimum: 1, examples: [1] },
+          limit: { type: 'integer', minimum: 1, maximum: 100, examples: [20] },
+          total: { type: 'integer', minimum: 0 },
+        },
+      },
     },
   },
   paths: {
@@ -100,15 +155,72 @@ export const openApiDocument = {
     },
     '/api/v1/subscriptions': {
       get: {
-        summary: 'Get subscriptions according to the authenticated user role',
-        responses: { '501': { description: 'Placeholder' } },
+        summary: 'Get subscription details according to the authenticated user role',
+        description:
+          'A regular user receives their current subscription. An ADMIN receives all current subscriptions with pagination.',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'page',
+            in: 'query',
+            required: false,
+            description: 'Admin pagination page. Defaults to 1.',
+            schema: { type: 'integer', minimum: 1, default: 1 },
+          },
+          {
+            name: 'limit',
+            in: 'query',
+            required: false,
+            description: 'Admin page size. Defaults to 20 and cannot exceed 100.',
+            schema: { type: 'integer', minimum: 1, maximum: 100, default: 20 },
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'Current user subscription or paginated admin result',
+            content: {
+              'application/json': {
+                schema: {
+                  oneOf: [
+                    { $ref: '#/components/schemas/SubscriptionDetails' },
+                    { $ref: '#/components/schemas/PaginatedSubscriptions' },
+                  ],
+                },
+              },
+            },
+          },
+          '400': { description: 'Invalid pagination parameters' },
+          '401': { description: 'Missing or invalid access token' },
+          '404': { description: 'Current user subscription not found' },
+        },
       },
     },
     '/api/v1/subscriptions/{userId}': {
       get: {
-        summary: 'Get a user subscription',
-        parameters: [{ name: 'userId', in: 'path', required: true, schema: { type: 'string' } }],
-        responses: { '501': { description: 'Placeholder' } },
+        summary: 'Get the current subscription for a user',
+        description: 'Available only to authenticated users with the ADMIN role.',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'userId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'Current subscription for the requested user',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/SubscriptionDetails' },
+              },
+            },
+          },
+          '401': { description: 'Missing or invalid access token' },
+          '403': { description: 'The authenticated user is not an admin' },
+          '404': { description: 'Current subscription not found' },
+        },
       },
     },
     '/api/v1/payments': {
