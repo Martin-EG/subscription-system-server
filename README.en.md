@@ -139,6 +139,62 @@ do not use this middleware yet.
 Invalid credentials or invalid JWTs return only status `401` with an empty body. Login
 rate limiting is recorded as technical debt and must be implemented before production.
 
+## Subscription Queries
+
+Subscription queries require a valid JWT:
+
+```http
+Authorization: Bearer <access_token>
+```
+
+### Current user subscription or administrative list
+
+```http
+GET /api/v1/subscriptions?page=1&limit=20
+```
+
+The response depends on the role included in the JWT:
+
+- A user with the `USER` role receives only their current subscription.
+- A user with the `ADMIN` role receives all current subscriptions with pagination.
+- Subscriptions with `ACTIVE` or `PAST_DUE` status are considered current.
+- `page` defaults to `1`.
+- `limit` defaults to `20` and cannot exceed `100`.
+
+Individual response:
+
+```json
+{
+  "subscriptionId": "subscription-uuid",
+  "userId": "user-uuid",
+  "userName": "Jane Doe",
+  "userEmail": "jane.doe@subsdemo.com",
+  "status": "ACTIVE",
+  "plan": {
+    "id": "plan-uuid",
+    "name": "Premium mensual",
+    "price": 99,
+    "currency": "MXN",
+    "billingPeriod": "MONTHLY"
+  },
+  "startedAt": "2026-06-12T00:00:00.000Z",
+  "expiresAt": "2026-07-12T00:00:00.000Z",
+  "cancelAtPeriodEnd": false
+}
+```
+
+The administrative response contains `data`, `page`, `limit` and `total`.
+
+### Query by user
+
+```http
+GET /api/v1/subscriptions/{userId}
+```
+
+This endpoint is restricted to `ADMIN`. A regular user receives `403 Forbidden`.
+Requests without a token or with an invalid JWT receive `401 Unauthorized`; a missing
+current subscription receives `404 Not Found`.
+
 ## Commands
 
 ```bash
@@ -155,20 +211,20 @@ npm run supabase:seed-users
 Swagger UI is available at `http://localhost:3000/docs` and health status at
 `http://localhost:3000/health`.
 
-## Placeholder Endpoints
+## Endpoints
 
-| Method | Path                             | Purpose                   |
-| ------ | -------------------------------- | ------------------------- |
-| POST   | `/api/v1/auth/login`             | Authenticate and get JWT  |
-| POST   | `/api/v1/subscriptions/checkout` | Activate subscription     |
-| PATCH  | `/api/v1/subscriptions/cancel`   | Cancel subscription       |
-| PATCH  | `/api/v1/subscriptions/renew`    | Renew subscription        |
-| GET    | `/api/v1/subscriptions`          | List/get own subscription |
-| GET    | `/api/v1/subscriptions/:userId`  | Get subscription by user  |
-| GET    | `/api/v1/payments`               | Get payment logs          |
+| Method | Path                             | Purpose                  |
+| ------ | -------------------------------- | ------------------------ |
+| POST   | `/api/v1/auth/login`             | Authenticate and get JWT |
+| POST   | `/api/v1/subscriptions/checkout` | Activate subscription    |
+| PATCH  | `/api/v1/subscriptions/cancel`   | Cancel subscription      |
+| PATCH  | `/api/v1/subscriptions/renew`    | Renew subscription       |
+| GET    | `/api/v1/subscriptions`          | Get own/list as admin    |
+| GET    | `/api/v1/subscriptions/:userId`  | Admin query by user      |
+| GET    | `/api/v1/payments`               | Get payment logs         |
 
-Authentication, authorization, validation, transactions, idempotency, retries, Kafka
-publishing and Resend delivery are intentionally not implemented.
+Checkout, cancellation, renewal, payments, Kafka publishing and Resend delivery remain
+pending features.
 
 ## Prisma and Supabase
 

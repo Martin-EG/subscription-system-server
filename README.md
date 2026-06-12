@@ -120,6 +120,62 @@ Las credenciales inválidas o los JWT no válidos responden únicamente con esta
 sin cuerpo. El rate limiting del login queda registrado como deuda técnica y deberá
 implementarse antes de producción.
 
+## Consulta de Suscripciones
+
+Las consultas de suscripciones requieren un JWT válido:
+
+```http
+Authorization: Bearer <access_token>
+```
+
+### Suscripción del usuario actual o listado administrativo
+
+```http
+GET /api/v1/subscriptions?page=1&limit=20
+```
+
+La respuesta depende del rol incluido en el JWT:
+
+- Un usuario con rol `USER` recibe únicamente su suscripción actual.
+- Un usuario con rol `ADMIN` recibe todas las suscripciones actuales con paginación.
+- Se consideran actuales las suscripciones con estado `ACTIVE` o `PAST_DUE`.
+- `page` tiene valor predeterminado `1`.
+- `limit` tiene valor predeterminado `20` y un máximo de `100`.
+
+Respuesta individual:
+
+```json
+{
+  "subscriptionId": "subscription-uuid",
+  "userId": "user-uuid",
+  "userName": "Jane Doe",
+  "userEmail": "jane.doe@subsdemo.com",
+  "status": "ACTIVE",
+  "plan": {
+    "id": "plan-uuid",
+    "name": "Premium mensual",
+    "price": 99,
+    "currency": "MXN",
+    "billingPeriod": "MONTHLY"
+  },
+  "startedAt": "2026-06-12T00:00:00.000Z",
+  "expiresAt": "2026-07-12T00:00:00.000Z",
+  "cancelAtPeriodEnd": false
+}
+```
+
+La respuesta administrativa contiene `data`, `page`, `limit` y `total`.
+
+### Consulta por usuario
+
+```http
+GET /api/v1/subscriptions/{userId}
+```
+
+Este endpoint es exclusivo para `ADMIN`. Un usuario regular recibe `403 Forbidden`. Las
+consultas sin token o con un JWT inválido reciben `401 Unauthorized`; una suscripción
+actual inexistente recibe `404 Not Found`.
+
 ## Comandos
 
 ```bash
@@ -136,19 +192,20 @@ npm run supabase:seed-users
 Swagger UI está disponible en `http://localhost:3000/docs` y el estado de salud en
 `http://localhost:3000/health`.
 
-## Endpoints Placeholder
+## Endpoints
 
-| Método | Ruta                             | Propósito                         |
-| ------ | -------------------------------- | --------------------------------- |
-| POST   | `/api/v1/auth/login`             | Autenticar y obtener un JWT       |
-| POST   | `/api/v1/subscriptions/checkout` | Activar una suscripción           |
-| PATCH  | `/api/v1/subscriptions/cancel`   | Cancelar una suscripción          |
-| PATCH  | `/api/v1/subscriptions/renew`    | Renovar una suscripción           |
-| GET    | `/api/v1/subscriptions`          | Consultar/listar suscripciones    |
-| GET    | `/api/v1/subscriptions/:userId`  | Consultar suscripción por usuario |
-| GET    | `/api/v1/payments`               | Consultar registros de pagos      |
+| Método | Ruta                             | Propósito                           |
+| ------ | -------------------------------- | ----------------------------------- |
+| POST   | `/api/v1/auth/login`             | Autenticar y obtener un JWT         |
+| POST   | `/api/v1/subscriptions/checkout` | Activar una suscripción             |
+| PATCH  | `/api/v1/subscriptions/cancel`   | Cancelar una suscripción            |
+| PATCH  | `/api/v1/subscriptions/renew`    | Renovar una suscripción             |
+| GET    | `/api/v1/subscriptions`          | Consultar propia/listar como admin  |
+| GET    | `/api/v1/subscriptions/:userId`  | Consulta administrativa por usuario |
+| GET    | `/api/v1/payments`               | Consultar registros de pagos        |
 
-La autenticación, autorización, validación, transacciones, idempotencia, reintentos, publicación en Kafka y envío mediante Resend todavía no están implementados.
+Checkout, cancelación, renovación, pagos, publicación en Kafka y envío mediante Resend
+continúan como funcionalidades pendientes.
 
 ## Prisma y Supabase
 

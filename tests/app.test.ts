@@ -1,8 +1,18 @@
 import request from 'supertest';
+import type { AuthProvider, SubscriptionRepository } from '../src/application/ports';
 import { createApp } from '../src/app.js';
 
 describe('HTTP application scaffold', () => {
-  const app = createApp();
+  const authProvider: AuthProvider = {
+    login: jest.fn(),
+    verifyAccessToken: jest.fn(),
+  };
+  const subscriptionRepository: SubscriptionRepository = {
+    findCurrentByUserId: jest.fn(),
+    findAll: jest.fn(),
+    save: jest.fn(),
+  };
+  const app = createApp({ authProvider, subscriptionRepository });
 
   it('reports service health', async () => {
     const response = await request(app).get('/health');
@@ -15,7 +25,6 @@ describe('HTTP application scaffold', () => {
     () => request(app).post('/api/v1/subscriptions/checkout'),
     () => request(app).patch('/api/v1/subscriptions/cancel'),
     () => request(app).patch('/api/v1/subscriptions/renew'),
-    () => request(app).get('/api/v1/subscriptions'),
     () => request(app).get('/api/v1/subscriptions/user-placeholder'),
     () => request(app).get('/api/v1/payments'),
   ];
