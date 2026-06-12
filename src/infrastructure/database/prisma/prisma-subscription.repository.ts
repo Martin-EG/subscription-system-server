@@ -1,10 +1,22 @@
-import type { PrismaClient } from '../../../generated/prisma/client.js';
-import { SubscriptionDetailsOutput } from '../../../application/dtos';
-import type { FindSubscriptionQuery, SubscriptionRepository, SubscriptionSearchResult } from '../../../application/ports';
+import type { SubscriptionDetailsOutput } from '../../../application/dtos';
+import type {
+  FindSubscriptionQuery,
+  SubscriptionRepository,
+  SubscriptionSearchResult,
+} from '../../../application/ports';
 import type { Subscription } from '../../../domain/entities';
 import { NotImplementedError } from '../../../domain/errors';
+import type { Prisma, PrismaClient } from '../../../generated/prisma/client.js';
+import { SubscriptionStatus } from '../../../generated/prisma/enums';
 
-type MapSubscriptionData = (subscription: any) => SubscriptionDetailsOutput;
+type SubscriptionWithRelations = Prisma.SubscriptionGetPayload<{
+  include: {
+    user: true;
+    plan: true;
+  };
+}>;
+
+type MapSubscriptionData = (subscription: SubscriptionWithRelations) => SubscriptionDetailsOutput;
 const mapSubscriptionData: MapSubscriptionData = (subscription) => ({
   subscriptionId: subscription.id,
   userId: subscription.userId,
@@ -20,29 +32,31 @@ const mapSubscriptionData: MapSubscriptionData = (subscription) => ({
   },
   startedAt: subscription.startedAt,
   expiresAt: subscription.expiresAt,
-  cancelAtPeriodEnd: subscription.cancelAtPeriodEnd
-})
+  cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
+});
 
 export class PrismaSubscriptionRepository implements SubscriptionRepository {
   constructor(private readonly prisma: PrismaClient) {}
-  
+
   async findCurrentByUserId(userId: string): Promise<SubscriptionDetailsOutput | null> {
     const subscription = await this.prisma.subscription.findFirst({
-      where: { userId },
+      where: {
+        userId,
+      },
       include: {
         user: true,
         plan: true,
       },
       orderBy: {
-        startedAt: 'desc'
-      }
+        startedAt: 'desc',
+      },
     });
 
-    if(!subscription) {
+    if (!subscription) {
       return null;
     }
 
-    return mapSubscriptionData(subscription)
+    return mapSubscriptionData(subscription);
   }
 
   async findAll({ page, limit }: FindSubscriptionQuery): Promise<SubscriptionSearchResult> {
@@ -50,21 +64,21 @@ export class PrismaSubscriptionRepository implements SubscriptionRepository {
       this.prisma.subscription.findMany({
         include: {
           user: true,
-          plan: true
+          plan: true,
         },
         skip: (page - 1) * limit,
         take: limit,
         orderBy: {
-          createdAt: 'desc'
-        }
+          createdAt: 'desc',
+        },
       }),
-      this.prisma.subscription.count()
+      this.prisma.subscription.count(),
     ]);
 
     return {
       items: items.map((item) => mapSubscriptionData(item)),
-      total
-    }
+      total,
+    };
   }
 
   save(_subscription: Subscription): Promise<void> {

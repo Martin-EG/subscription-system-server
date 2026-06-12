@@ -4,7 +4,7 @@ describe('paginationSchema', () => {
   it('applies pagination defaults', () => {
     expect(paginationSchema.parse({})).toEqual({
       page: 1,
-      limit: 10,
+      limit: 20,
     });
   });
 

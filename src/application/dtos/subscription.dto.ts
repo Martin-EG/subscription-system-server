@@ -1,5 +1,5 @@
 import type { SubscriptionStatus } from '../../domain/entities';
-import { BillingPeriod } from '../../generated/prisma/enums';
+import type { BillingPeriod } from '../../generated/prisma/enums';
 
 export interface CheckoutSubscriptionInput {
   userId: string;
@@ -37,7 +37,7 @@ export interface SubscriptionDetailsOutput {
     price: number;
     currency: string;
     billingPeriod: BillingPeriod | null;
-  }
+  };
   startedAt: Date;
   expiresAt: Date | null;
   cancelAtPeriodEnd: boolean;
