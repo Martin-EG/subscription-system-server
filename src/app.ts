@@ -1,20 +1,24 @@
 import express from 'express';
 import swaggerUi from 'swagger-ui-express';
-import type { AuthProvider } from './application/ports';
+
+import type { AuthProvider, SubscriptionRepository } from './application/ports';
 import { UnauthorizedError } from './domain/errors';
 import { createSupabaseAuthProvider } from './infrastructure/auth';
 import { env } from './infrastructure/config/env.js';
+import { PrismaSubscriptionRepository } from './infrastructure/database/prisma/prisma-subscription.repository';
+import { createPrismaClient } from './infrastructure/database/prisma/prisma.client';
 import { errorHandler } from './presentation/http/middlewares';
 import { openApiDocument } from './presentation/http/openapi.js';
 import { 
   createAuthRouter,
   healthRouter,
   paymentRouter,
-  subscriptionRouter 
+  createSubscriptionRouter 
 } from './presentation/http/routes';
 
 export interface AppDependencies {
-  authProvider?: AuthProvider;
+  authProvider: AuthProvider;
+  subscriptionRepository: SubscriptionRepository;
 }
 
 const unconfiguredAuthProvider: AuthProvider = {
@@ -22,7 +26,7 @@ const unconfiguredAuthProvider: AuthProvider = {
   verifyAccessToken: () => Promise.reject(new UnauthorizedError()),
 };
 
-function getDefaultAuthProvider(): AuthProvider {
+export function getDefaultAuthProvider(): AuthProvider {
   if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) {
     return unconfiguredAuthProvider;
   }
@@ -30,9 +34,8 @@ function getDefaultAuthProvider(): AuthProvider {
   return createSupabaseAuthProvider(env.SUPABASE_URL, env.SUPABASE_ANON_KEY);
 }
 
-export function createApp(dependencies: AppDependencies = {}) {
+export function createApp({ authProvider, subscriptionRepository }: AppDependencies) {
   const app = express();
-  const authProvider = dependencies.authProvider ?? getDefaultAuthProvider();
 
   app.disable('x-powered-by');
   app.use(express.json());
@@ -45,7 +48,13 @@ export function createApp(dependencies: AppDependencies = {}) {
       isProduction: env.NODE_ENV === 'production',
     }),
   );
-  app.use('/api/v1/subscriptions', subscriptionRouter);
+  app.use(
+    '/api/v1/subscriptions', 
+    createSubscriptionRouter({
+      authProvider,
+      subscriptionRepository
+    }),
+  );
   app.use('/api/v1/payments', paymentRouter);
   app.use(errorHandler);
 
