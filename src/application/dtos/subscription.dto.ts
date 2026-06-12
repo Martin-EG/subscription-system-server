@@ -1,4 +1,4 @@
-import type { SubscriptionStatus } from '../../domain/entities/subscription.js';
+import type { SubscriptionStatus } from '../../domain/entities';
 import { BillingPeriod } from '../../generated/prisma/enums';
 
 export interface CheckoutSubscriptionInput {

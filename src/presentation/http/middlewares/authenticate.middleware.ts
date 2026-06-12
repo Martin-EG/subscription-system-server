@@ -1,6 +1,6 @@
 import type { RequestHandler } from 'express';
-import type { AuthProvider } from '../../../application/ports/auth-provider.port.js';
-import { UnauthorizedError } from '../../../domain/errors/unauthorized.error.js';
+import type { AuthProvider } from '../../../application/ports';
+import { UnauthorizedError } from '../../../domain/errors';
 
 export function authenticate(authProvider: AuthProvider): RequestHandler {
   return async (request, response, next) => {

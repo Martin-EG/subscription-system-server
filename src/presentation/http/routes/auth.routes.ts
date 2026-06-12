@@ -1,9 +1,9 @@
 import { Router } from 'express';
-import type { AuthProvider } from '../../../application/ports/auth-provider.port.js';
-import { LoginUseCase } from '../../../application/use-cases/login.use-case.js';
-import { createLoginController } from '../controllers/auth.controller.js';
-import { validateBody } from '../middlewares/validate.middleware.js';
-import { loginBodySchema } from '../schemas/auth.schemas.js';
+import type { AuthProvider } from '../../../application/ports';
+import { LoginUseCase } from '../../../application/use-cases';
+import { createLoginController } from '../controllers';
+import { validateBody } from '../middlewares';
+import { loginBodySchema } from '../schemas';
 
 export interface AuthRouterOptions {
   authProvider: AuthProvider;

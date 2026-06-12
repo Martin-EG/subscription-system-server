@@ -1,5 +1,5 @@
-import type { LoginInput, LoginOutput } from '../dtos/auth.dto.js';
-import type { AuthProvider } from '../ports/auth-provider.port.js';
+import type { LoginInput, LoginOutput } from '../dtos';
+import type { AuthProvider } from '../ports';
 
 export class LoginUseCase {
   constructor(private readonly authProvider: AuthProvider) {}

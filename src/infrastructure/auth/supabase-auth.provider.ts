@@ -1,7 +1,7 @@
 import { createClient, type SupabaseClient, type User } from '@supabase/supabase-js';
-import type { LoginInput, LoginOutput } from '../../application/dtos/auth.dto.js';
-import type { AuthProvider } from '../../application/ports/auth-provider.port.js';
-import { UnauthorizedError } from '../../domain/errors/unauthorized.error.js';
+import type { LoginInput, LoginOutput } from '../../application/dtos';
+import type { AuthProvider } from '../../application/ports';
+import { UnauthorizedError } from '../../domain/errors';
 
 type SupabaseAuthClient = Pick<SupabaseClient, 'auth'>;
 

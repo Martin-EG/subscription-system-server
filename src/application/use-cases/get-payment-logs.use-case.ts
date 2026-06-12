@@ -1,5 +1,5 @@
-import type { PaymentLog } from '../../domain/entities/payment-log.js';
-import { NotImplementedError } from '../../domain/errors/not-implemented.error.js';
+import type { PaymentLog } from '../../domain/entities';
+import { NotImplementedError } from '../../domain/errors';
 
 export class GetPaymentLogsUseCase {
   execute(_userId?: string): Promise<PaymentLog[]> {

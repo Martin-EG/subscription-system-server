@@ -1,6 +1,6 @@
 import type { RequestHandler } from 'express';
-import type { LoginInput } from '../../../application/dtos/auth.dto.js';
-import type { LoginUseCase } from '../../../application/use-cases/login.use-case.js';
+import type { LoginInput } from '../../../application/dtos';
+import type { LoginUseCase } from '../../../application/use-cases';
 
 export function createLoginController(
   loginUseCase: LoginUseCase,
