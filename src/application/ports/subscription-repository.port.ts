@@ -1,5 +1,5 @@
 import type { Subscription } from '../../domain/entities';
-import { SubscriptionDetailsOutput } from '../dtos';
+import type { SubscriptionDetailsOutput } from '../dtos';
 
 export interface FindSubscriptionQuery {
   page: number;

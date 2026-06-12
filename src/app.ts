@@ -5,15 +5,13 @@ import type { AuthProvider, SubscriptionRepository } from './application/ports';
 import { UnauthorizedError } from './domain/errors';
 import { createSupabaseAuthProvider } from './infrastructure/auth';
 import { env } from './infrastructure/config/env.js';
-import { PrismaSubscriptionRepository } from './infrastructure/database/prisma/prisma-subscription.repository';
-import { createPrismaClient } from './infrastructure/database/prisma/prisma.client';
 import { errorHandler } from './presentation/http/middlewares';
 import { openApiDocument } from './presentation/http/openapi.js';
-import { 
+import {
   createAuthRouter,
   healthRouter,
   paymentRouter,
-  createSubscriptionRouter 
+  createSubscriptionRouter,
 } from './presentation/http/routes';
 
 export interface AppDependencies {
@@ -49,10 +47,10 @@ export function createApp({ authProvider, subscriptionRepository }: AppDependenc
     }),
   );
   app.use(
-    '/api/v1/subscriptions', 
+    '/api/v1/subscriptions',
     createSubscriptionRouter({
       authProvider,
-      subscriptionRepository
+      subscriptionRepository,
     }),
   );
   app.use('/api/v1/payments', paymentRouter);
