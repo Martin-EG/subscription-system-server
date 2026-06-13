@@ -81,6 +81,12 @@ Después ejecuta:
 
 Esta migración reemplaza los IDs iniciales de los planes por UUID v4 válidos, reasigna las suscripciones existentes y actualiza el trigger que entrega el plan gratuito a usuarios nuevos.
 
+Para habilitar el worker de expiración en una base existente, ejecuta también:
+[`supabase/migrations/20260613_subscription_expiration_index.sql`](supabase/migrations/20260613_subscription_expiration_index.sql)
+
+La migración agrega el índice `(status, expires_at)` utilizado para reclamar suscripciones
+vencidas por lotes.
+
 El SQL crea las tablas públicas, enums, índices, el trigger de sincronización de perfiles, las políticas RLS de lectura y los siguientes planes:
 
 | Plan            | ID                                     | Precio | Moneda | Periodo de cobro |
@@ -170,6 +176,25 @@ estado a `PROCESSING` y publica un evento estructurado mediante
 `ConsoleEventPublisher`. Si la publicación termina correctamente, marca la fila como
 `SENT`; si falla, aplica backoff exponencial y la devuelve a `PENDING`, o la marca como
 `FAILED` al alcanzar el máximo de intentos.
+
+## Expiración y Acceso Premium
+
+Un worker independiente revisa periódicamente suscripciones `ACTIVE` o `PAST_DUE` cuya
+fecha `expires_at` ya pasó:
+
+- Una suscripción normal pasa a `EXPIRED`.
+- Una suscripción con `cancel_at_period_end=true` pasa a `CANCELLED` y registra
+  `cancelled_at`.
+- `user_access.has_premium_access` cambia a `false` y `valid_until` a `NULL`.
+
+La suscripción y el acceso se actualizan en una sola transacción. Las filas se reclaman
+con `FOR UPDATE SKIP LOCKED`, permitiendo ejecutar varias réplicas sin procesar la misma
+suscripción simultáneamente. El acceso sólo se retira cuando su propio `valid_until`
+también está vencido, evitando que un proceso atrasado invalide una renovación reciente.
+
+El intervalo y tamaño de lote se configuran con
+`SUBSCRIPTION_EXPIRATION_POLL_INTERVAL_MS` y
+`SUBSCRIPTION_EXPIRATION_BATCH_SIZE`.
 
 Respuestas relevantes: `200`, `400`, `401`, `402`, `404`, `409`, `422` y `500`.
 

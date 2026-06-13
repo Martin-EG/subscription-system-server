@@ -1,6 +1,6 @@
 export interface UserAccess {
   userId: string;
   hasPremiumAccess: boolean;
-  validUntil: Date;
+  validUntil: Date | null;
   updatedAt: Date;
 }
