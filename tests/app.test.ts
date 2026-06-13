@@ -4,6 +4,7 @@ import type {
   CheckoutTransactionPort,
   IdempotencyRepository,
   PaymentProcessor,
+  PaymentRepository,
   PlanRepository,
   SubscriptionRepository,
 } from '../src/application/ports';
@@ -26,6 +27,11 @@ describe('HTTP application scaffold', () => {
   const paymentProcessor: jest.Mocked<PaymentProcessor> = {
     process: jest.fn(),
   };
+  const paymentRepository: jest.Mocked<PaymentRepository> = {
+    findByUserId: jest.fn(),
+    findAll: jest.fn(),
+    save: jest.fn(),
+  };
   const planRepository: jest.Mocked<PlanRepository> = {
     findById: jest.fn(),
     findAll: jest.fn(),
@@ -40,6 +46,7 @@ describe('HTTP application scaffold', () => {
     checkoutTransaction,
     idempotencyRepository,
     paymentProcessor,
+    paymentRepository,
     planRepository,
     subscriptionRepository,
   });
