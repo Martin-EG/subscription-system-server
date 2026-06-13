@@ -1,6 +1,6 @@
-import type { PaymentRepository } from "../../../application/ports";
-import type { PaymentLog } from "../../../domain/entities";
-import type { PrismaClient } from "../../../generated/prisma/client";
+import type { PaymentRepository } from '../../../application/ports';
+import type { PaymentLog } from '../../../domain/entities';
+import type { PrismaClient } from '../../../generated/prisma/client';
 
 export class PrismaPaymentRepository implements PaymentRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -8,11 +8,11 @@ export class PrismaPaymentRepository implements PaymentRepository {
   async findByUserId(userId: string): Promise<PaymentLog[]> {
     const records = await this.prisma.paymentLog.findMany({
       where: {
-        userId
+        userId,
       },
       orderBy: {
-        paymentDate: 'desc'
-      }
+        paymentDate: 'desc',
+      },
     });
 
     return records.map((record) => ({
@@ -23,7 +23,7 @@ export class PrismaPaymentRepository implements PaymentRepository {
 
   async save(payment: PaymentLog): Promise<void> {
     await this.prisma.paymentLog.create({
-      data: payment
+      data: payment,
     });
   }
 }

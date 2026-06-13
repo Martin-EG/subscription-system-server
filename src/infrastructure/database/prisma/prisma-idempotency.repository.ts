@@ -70,29 +70,29 @@ export class PrismaIdempotencyRepository implements IdempotencyRepository {
         requestHash: input.requestHash,
         OR: [
           { status: 'FAILED' },
-          { 
+          {
             status: 'PROCESSING',
-            expiresAt: { lte: new Date() }
-          }
-        ]
+            expiresAt: { lte: new Date() },
+          },
+        ],
       },
       data: {
         status: 'PROCESSING',
         expiresAt: input.expiresAt,
         responseStatus: null,
         responseBody: Prisma.DbNull,
-        resourceId: null
-      }
+        resourceId: null,
+      },
     });
 
-    if(reclaimResult.count === 1) {
+    if (reclaimResult.count === 1) {
       const reclaimed = await this.prisma.idempotencyKey.findUniqueOrThrow({
-        where: { id: existingRecord.id }
+        where: { id: existingRecord.id },
       });
 
       return {
         outcome: 'CLAIMED',
-        record: reclaimed
+        record: reclaimed,
       };
     }
 

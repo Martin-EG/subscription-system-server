@@ -1,8 +1,14 @@
-import type { BillingPeriod } from "../entities";
+import type { BillingPeriod } from '../entities';
 
-type CalculateSubscriptionExpiration = (startedAt: Date, billingPeriod: BillingPeriod | null) => Date | null;
-export const calculateSubscriptionExpiration: CalculateSubscriptionExpiration = (startedAt, billingPeriod) => {
-  if(billingPeriod === null) {
+type CalculateSubscriptionExpiration = (
+  startedAt: Date,
+  billingPeriod: BillingPeriod | null,
+) => Date | null;
+export const calculateSubscriptionExpiration: CalculateSubscriptionExpiration = (
+  startedAt,
+  billingPeriod,
+) => {
+  if (billingPeriod === null) {
     return null;
   }
 
@@ -10,7 +16,7 @@ export const calculateSubscriptionExpiration: CalculateSubscriptionExpiration = 
   const month = startedAt.getUTCMonth();
   const day = startedAt.getUTCDate();
 
-  if(billingPeriod === 'YEARLY') {
+  if (billingPeriod === 'YEARLY') {
     const isLeapYear = startedAt.getUTCMonth() === 1 && startedAt.getUTCDate() === 29;
     const dayOfNextYear = isLeapYear ? 28 : startedAt.getUTCDate();
 
@@ -23,7 +29,7 @@ export const calculateSubscriptionExpiration: CalculateSubscriptionExpiration = 
         startedAt.getUTCMinutes(),
         startedAt.getUTCSeconds(),
         startedAt.getUTCMilliseconds(),
-      )
+      ),
     );
   }
 
@@ -38,6 +44,6 @@ export const calculateSubscriptionExpiration: CalculateSubscriptionExpiration = 
       startedAt.getUTCMinutes(),
       startedAt.getUTCSeconds(),
       startedAt.getUTCMilliseconds(),
-    )
+    ),
   );
-}
+};

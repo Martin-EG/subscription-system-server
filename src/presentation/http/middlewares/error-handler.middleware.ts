@@ -1,13 +1,13 @@
 import type { ErrorRequestHandler } from 'express';
 import {
-  ForbiddenError, 
+  ForbiddenError,
   IdempotencyConflictError,
   IdempotencyInProgressError,
   InvalidPlanForCheckoutError,
-  NotFoundError, 
-  NotImplementedError, 
+  NotFoundError,
+  NotImplementedError,
   PaymentDeclinedError,
-  UnauthorizedError 
+  UnauthorizedError,
 } from '../../../domain/errors';
 
 export const errorHandler: ErrorRequestHandler = (error, _request, response, _next) => {
@@ -16,27 +16,27 @@ export const errorHandler: ErrorRequestHandler = (error, _request, response, _ne
     return;
   }
 
-  if(error instanceof PaymentDeclinedError) {
+  if (error instanceof PaymentDeclinedError) {
     response.status(402).end();
     return;
   }
 
-  if(error instanceof ForbiddenError) {
+  if (error instanceof ForbiddenError) {
     response.status(403).end();
     return;
   }
 
-  if(error instanceof NotFoundError) {
+  if (error instanceof NotFoundError) {
     response.status(404).end();
     return;
   }
 
-  if(error instanceof IdempotencyConflictError || error instanceof IdempotencyInProgressError) {
+  if (error instanceof IdempotencyConflictError || error instanceof IdempotencyInProgressError) {
     response.status(409).end();
     return;
   }
 
-  if(error instanceof InvalidPlanForCheckoutError) {
+  if (error instanceof InvalidPlanForCheckoutError) {
     response.status(422).end();
     return;
   }
