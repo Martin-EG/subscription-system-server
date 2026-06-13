@@ -1,6 +1,7 @@
 import type { ClaimIdempotencyInput, ClaimIdempotencyResult } from '../../../application/dtos';
 import type { IdempotencyRepository } from '../../../application/ports';
 import type { PrismaClient } from '../../../generated/prisma/client.js';
+import { Prisma } from '../../../generated/prisma/client.js';
 
 export class PrismaIdempotencyRepository implements IdempotencyRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -55,12 +56,6 @@ export class PrismaIdempotencyRepository implements IdempotencyRepository {
       };
     }
 
-    if (existingRecord.status === 'PROCESSING' && existingRecord.expiresAt > new Date()) {
-      return {
-        outcome: 'IN_PROGRESS',
-      };
-    }
-
     if (existingRecord.status === 'COMPLETED' && existingRecord.responseStatus !== null) {
       return {
         outcome: 'REPLAY',
@@ -69,8 +64,40 @@ export class PrismaIdempotencyRepository implements IdempotencyRepository {
       };
     }
 
+    const reclaimResult = await this.prisma.idempotencyKey.updateMany({
+      where: {
+        id: existingRecord.id,
+        requestHash: input.requestHash,
+        OR: [
+          { status: 'FAILED' },
+          { 
+            status: 'PROCESSING',
+            expiresAt: { lte: new Date() }
+          }
+        ]
+      },
+      data: {
+        status: 'PROCESSING',
+        expiresAt: input.expiresAt,
+        responseStatus: null,
+        responseBody: Prisma.DbNull,
+        resourceId: null
+      }
+    });
+
+    if(reclaimResult.count === 1) {
+      const reclaimed = await this.prisma.idempotencyKey.findUniqueOrThrow({
+        where: { id: existingRecord.id }
+      });
+
+      return {
+        outcome: 'CLAIMED',
+        record: reclaimed
+      };
+    }
+
     return {
-      outcome: 'FAILED',
+      outcome: 'IN_PROGRESS',
     };
   }
 }

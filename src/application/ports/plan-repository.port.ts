@@ -1,14 +1,5 @@
 import type { Plan } from "../../domain/entities";
-
-export interface FindPlanQuery {
-  page: number;
-  limit: number;
-}
-
-export interface PlanSearchResult {
-  items: Plan[];
-  total: number;
-}
+import type { FindPlanQuery, PlanSearchResult } from "../dtos";
 
 export interface PlanRepository {
   findById(planId: string): Promise<Plan | null>;
