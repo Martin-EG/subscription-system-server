@@ -99,6 +99,11 @@ Then run
 It replaces the original plan IDs with valid UUID v4 values, reassigns existing
 subscriptions and updates the trigger that grants the free plan to new users.
 
+To enable the expiration worker on an existing database, also run
+[`supabase/migrations/20260613_subscription_expiration_index.sql`](supabase/migrations/20260613_subscription_expiration_index.sql).
+This migration adds the `(status, expires_at)` index used to claim expired subscriptions
+in batches.
+
 The SQL creates the public tables, enums, indexes, profile synchronization trigger,
 read-only RLS policies and these plans:
 
@@ -188,6 +193,25 @@ The worker claims notifications in batches with `FOR UPDATE SKIP LOCKED`, change
 status to `PROCESSING`, and publishes a structured event through
 `ConsoleEventPublisher`. Successful publications are marked `SENT`; failures use
 exponential backoff and return to `PENDING`, or become `FAILED` after the retry limit.
+
+## Expiration and Premium Access
+
+A separate worker periodically finds `ACTIVE` or `PAST_DUE` subscriptions whose
+`expires_at` date has passed:
+
+- A regular subscription becomes `EXPIRED`.
+- A subscription with `cancel_at_period_end=true` becomes `CANCELLED` and records
+  `cancelled_at`.
+- `user_access.has_premium_access` becomes `false` and `valid_until` becomes `NULL`.
+
+Subscription and access updates run in one transaction. Rows are claimed with
+`FOR UPDATE SKIP LOCKED`, allowing multiple replicas to run without processing the same
+subscription concurrently. Access is revoked only when its own `valid_until` is also
+expired, preventing a delayed worker from invalidating a recent renewal.
+
+Configure the interval and batch size with
+`SUBSCRIPTION_EXPIRATION_POLL_INTERVAL_MS` and
+`SUBSCRIPTION_EXPIRATION_BATCH_SIZE`.
 
 Relevant responses are `200`, `400`, `401`, `402`, `404`, `409`, `422` and `500`.
 

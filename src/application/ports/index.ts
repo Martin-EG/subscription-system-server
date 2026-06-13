@@ -8,3 +8,4 @@ export * from './payment-processor.port';
 export * from './payment-repository.port';
 export * from './plan-repository.port';
 export * from './subscription-repository.port';
+export * from './subscription-expiration.port';
