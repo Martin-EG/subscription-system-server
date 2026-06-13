@@ -6,6 +6,7 @@ import type {
   PaymentProcessor,
   PaymentRepository,
   PlanRepository,
+  RenewalTransactionPort,
   SubscriptionRepository,
 } from '../src/application/ports';
 import { createApp } from '../src/app.js';
@@ -36,6 +37,9 @@ describe('HTTP application scaffold', () => {
     findById: jest.fn(),
     findAll: jest.fn(),
   };
+  const renewalTransaction: jest.Mocked<RenewalTransactionPort> = {
+    completeRenewal: jest.fn(),
+  };
   const subscriptionRepository: jest.Mocked<SubscriptionRepository> = {
     findCurrentByUserId: jest.fn(),
     findRenewableByUserId: jest.fn(),
@@ -51,6 +55,7 @@ describe('HTTP application scaffold', () => {
     paymentProcessor,
     paymentRepository,
     planRepository,
+    renewalTransaction,
     subscriptionRepository,
   });
 

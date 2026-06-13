@@ -7,5 +7,6 @@ export * from './payment-notification-repository.port';
 export * from './payment-processor.port';
 export * from './payment-repository.port';
 export * from './plan-repository.port';
+export * from './renewal-transaction.port';
 export * from './subscription-repository.port';
 export * from './subscription-expiration.port';

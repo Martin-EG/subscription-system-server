@@ -21,6 +21,21 @@ export interface RenewSubscriptionInput {
   idempotencyKey: string;
 }
 
+export interface CompleteRenewalInput {
+  userId: string;
+  subscriptionId: string;
+  idempotencyId: string;
+  validatedAt: Date;
+  startedAt: Date;
+  expiresAt: Date;
+  payment: {
+    transactionId: string;
+    amount: number;
+    currency: string;
+    processedAt: Date;
+  } | null;
+}
+
 export interface RenewableSubscription {
   subscriptionId: string;
   userId: string;

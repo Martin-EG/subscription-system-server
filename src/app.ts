@@ -8,6 +8,7 @@ import type {
   PaymentProcessor,
   PaymentRepository,
   PlanRepository,
+  RenewalTransactionPort,
   SubscriptionRepository,
 } from './application/ports';
 import { UnauthorizedError } from './domain/errors';
@@ -30,6 +31,7 @@ export interface AppDependencies {
   paymentProcessor: PaymentProcessor;
   paymentRepository: PaymentRepository;
   planRepository: PlanRepository;
+  renewalTransaction: RenewalTransactionPort;
   subscriptionRepository: SubscriptionRepository;
 }
 
@@ -53,6 +55,7 @@ export function createApp({
   paymentProcessor,
   paymentRepository,
   planRepository,
+  renewalTransaction,
   subscriptionRepository,
 }: AppDependencies) {
   const app = express();
@@ -76,6 +79,7 @@ export function createApp({
       idempotencyRepository,
       paymentProcessor,
       planRepository,
+      renewalTransaction,
       subscriptionRepository,
     }),
   );

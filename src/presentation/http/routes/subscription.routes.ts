@@ -5,6 +5,7 @@ import type {
   IdempotencyRepository,
   PaymentProcessor,
   PlanRepository,
+  RenewalTransactionPort,
   SubscriptionRepository,
 } from '../../../application/ports';
 import { createCheckoutSubscriptionController, notImplemented } from '../controllers';
@@ -29,6 +30,7 @@ export interface SubscriptionRouterOptions {
   idempotencyRepository: IdempotencyRepository;
   paymentProcessor: PaymentProcessor;
   checkoutTransaction: CheckoutTransactionPort;
+  renewalTransaction: RenewalTransactionPort;
 }
 
 export function createSubscriptionRouter({
@@ -37,12 +39,18 @@ export function createSubscriptionRouter({
   idempotencyRepository,
   paymentProcessor,
   planRepository,
+  renewalTransaction,
   subscriptionRepository,
 }: SubscriptionRouterOptions): Router {
   const router = Router();
   const getSubscriptionsUseCase = new GetSubscriptionsUseCase(subscriptionRepository);
   const cancelSubscriptionUseCase = new CancelSubscriptionUseCase(subscriptionRepository);
-  const renewSubscriptionUseCase = new RenewSubscriptionUseCase(subscriptionRepository);
+  const renewSubscriptionUseCase = new RenewSubscriptionUseCase(
+    subscriptionRepository,
+    idempotencyRepository,
+    paymentProcessor,
+    renewalTransaction,
+  );
   const checkoutSubscriptionUseCase = new CheckoutSubscriptionUseCase(
     planRepository,
     idempotencyRepository,

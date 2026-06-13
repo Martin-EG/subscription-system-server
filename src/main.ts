@@ -9,6 +9,7 @@ import { PrismaIdempotencyRepository } from './infrastructure/database/prisma/pr
 import { PrismaPaymentNotificationRepository } from './infrastructure/database/prisma/prisma-payment-notification.repository.js';
 import { PrismaPaymentRepository } from './infrastructure/database/prisma/prisma-payment.repository.js';
 import { PrismaPlanRepository } from './infrastructure/database/prisma/prisma-plan.repository.js';
+import { PrismaRenewalTransaction } from './infrastructure/database/prisma/prisma-renewal.transaction.js';
 import { PrismaSubscriptionRepository } from './infrastructure/database/prisma/prisma-subscription.repository.js';
 import { PrismaSubscriptionExpirationRepository } from './infrastructure/database/prisma/prisma-subscription-expiration.repository.js';
 import { createPrismaClient } from './infrastructure/database/prisma/prisma.client.js';
@@ -47,6 +48,7 @@ const app = createApp({
   paymentProcessor: new SimulatedPaymentProcessor(),
   paymentRepository: new PrismaPaymentRepository(prisma),
   planRepository: new PrismaPlanRepository(prisma),
+  renewalTransaction: new PrismaRenewalTransaction(prisma),
   subscriptionRepository: new PrismaSubscriptionRepository(prisma),
 });
 

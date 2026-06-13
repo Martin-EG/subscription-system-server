@@ -278,6 +278,7 @@ export const openApiDocument = {
           },
           '400': { description: 'Invalid request body' },
           '401': { description: 'Missing or invalid access token' },
+          '402': { description: 'Payment declined' },
           '404': { description: 'Subscription not found' },
           '409': { description: 'Subscription or idempotency conflict' },
         },

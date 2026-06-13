@@ -75,6 +75,7 @@ export class PrismaSubscriptionRepository implements SubscriptionRepository {
             SubscriptionStatus.ACTIVE,
             SubscriptionStatus.PAST_DUE,
             SubscriptionStatus.CANCELLED,
+            SubscriptionStatus.EXPIRED,
           ],
         },
       },

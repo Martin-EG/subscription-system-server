@@ -3,7 +3,7 @@ import type { IdempotencyKey } from '../../domain/entities';
 export interface ClaimIdempotencyInput {
   key: string;
   userId: string;
-  operation: 'CHECKOUT';
+  operation: 'CHECKOUT' | 'RENEW';
   requestHash: string;
   expiresAt: Date;
 }

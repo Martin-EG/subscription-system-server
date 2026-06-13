@@ -6,6 +6,7 @@ import type {
   IdempotencyRepository,
   PaymentProcessor,
   PlanRepository,
+  RenewalTransactionPort,
   SubscriptionRepository,
 } from '../../../../src/application/ports';
 import { errorHandler } from '../../../../src/presentation/http/middlewares';
@@ -86,6 +87,14 @@ function createDependencies() {
     }),
     findAll: jest.fn(),
   };
+  const renewalTransaction: jest.Mocked<RenewalTransactionPort> = {
+    completeRenewal: jest.fn().mockResolvedValue({
+      subscriptionId: 'premium-subscription-id',
+      status: 'ACTIVE',
+      expiresAt,
+      cancelAtPeriodEnd: false,
+    }),
+  };
   const findCurrentByUserId = jest.fn().mockResolvedValue(subscription);
   const renewableSubscription = {
     subscriptionId: 'premium-subscription-id',
@@ -127,6 +136,7 @@ function createDependencies() {
     idempotencyRepository,
     paymentProcessor,
     planRepository,
+    renewalTransaction,
     subscriptionRepository,
     planId,
     processedAt,
@@ -150,6 +160,7 @@ function createApp() {
       idempotencyRepository: dependencies.idempotencyRepository,
       paymentProcessor: dependencies.paymentProcessor,
       planRepository: dependencies.planRepository,
+      renewalTransaction: dependencies.renewalTransaction,
       subscriptionRepository: dependencies.subscriptionRepository,
     }),
   );
@@ -273,7 +284,7 @@ describe('createSubscriptionRouter', () => {
   });
 
   it('renews without accepting a plan selection', async () => {
-    const { app, findRenewableByUserId, renew } = createApp();
+    const { app, findRenewableByUserId, renewalTransaction } = createApp();
     findRenewableByUserId.mockResolvedValueOnce({
       ...(await findRenewableByUserId()),
       status: 'PAST_DUE',
@@ -288,11 +299,13 @@ describe('createSubscriptionRouter', () => {
       });
 
     expect(response.status).toBe(200);
-    expect(renew).toHaveBeenCalledWith(
+    expect(renewalTransaction.completeRenewal).toHaveBeenCalledWith(
       expect.objectContaining({
         subscriptionId: 'premium-subscription-id',
         userId: 'user-id',
-        idempotencyKey: 'renew-request-1',
+        payment: expect.objectContaining({
+          transactionId: 'transaction-id',
+        }) as unknown,
       }),
     );
   });
