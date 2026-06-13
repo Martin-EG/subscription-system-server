@@ -1,6 +1,14 @@
 import express from 'express';
 import request from 'supertest';
-import { ForbiddenError, NotFoundError } from '../../../../src/domain/errors';
+import {
+  ForbiddenError,
+  IdempotencyConflictError,
+  IdempotencyInProgressError,
+  InvalidPlanForCheckoutError,
+  NotFoundError,
+  PaymentDeclinedError,
+  UnauthorizedError,
+} from '../../../../src/domain/errors';
 import { errorHandler } from '../../../../src/presentation/http/middlewares';
 
 function createApp(error: Error) {
@@ -13,6 +21,20 @@ function createApp(error: Error) {
 }
 
 describe('subscription error handling', () => {
+  it('returns an empty 401 response for unauthorized', async () => {
+    const response = await request(createApp(new UnauthorizedError())).get('/failure');
+
+    expect(response.status).toBe(401);
+    expect(response.text).toBe('');
+  });
+
+  it('returns an empty 402 response for payment declined', async () => {
+    const response = await request(createApp(new PaymentDeclinedError())).get('/failure');
+
+    expect(response.status).toBe(402);
+    expect(response.text).toBe('');
+  });
+
   it('returns an empty 403 response for forbidden access', async () => {
     const response = await request(createApp(new ForbiddenError())).get('/failure');
 
@@ -24,6 +46,27 @@ describe('subscription error handling', () => {
     const response = await request(createApp(new NotFoundError('Subscription'))).get('/failure');
 
     expect(response.status).toBe(404);
+    expect(response.text).toBe('');
+  });
+
+  it('returns an empty 409 response for idempotency conflict', async () => {
+    const response = await request(createApp(new IdempotencyConflictError())).get('/failure');
+
+    expect(response.status).toBe(409);
+    expect(response.text).toBe('');
+  });
+
+  it('returns an empty 409 response for idempotency in progress', async () => {
+    const response = await request(createApp(new IdempotencyInProgressError())).get('/failure');
+
+    expect(response.status).toBe(409);
+    expect(response.text).toBe('');
+  });
+
+  it('returns an empty 422 response for invalid plan for checkout', async () => {
+    const response = await request(createApp(new InvalidPlanForCheckoutError())).get('/failure');
+
+    expect(response.status).toBe(422);
     expect(response.text).toBe('');
   });
 });

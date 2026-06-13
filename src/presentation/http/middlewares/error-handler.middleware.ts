@@ -1,14 +1,23 @@
 import type { ErrorRequestHandler } from 'express';
 import {
   ForbiddenError, 
+  IdempotencyConflictError,
+  IdempotencyInProgressError,
+  InvalidPlanForCheckoutError,
   NotFoundError, 
   NotImplementedError, 
+  PaymentDeclinedError,
   UnauthorizedError 
 } from '../../../domain/errors';
 
 export const errorHandler: ErrorRequestHandler = (error, _request, response, _next) => {
   if (error instanceof UnauthorizedError) {
     response.status(401).end();
+    return;
+  }
+
+  if(error instanceof PaymentDeclinedError) {
+    response.status(402).end();
     return;
   }
 
@@ -19,6 +28,16 @@ export const errorHandler: ErrorRequestHandler = (error, _request, response, _ne
 
   if(error instanceof NotFoundError) {
     response.status(404).end();
+    return;
+  }
+
+  if(error instanceof IdempotencyConflictError || error instanceof IdempotencyInProgressError) {
+    response.status(409).end();
+    return;
+  }
+
+  if(error instanceof InvalidPlanForCheckoutError) {
+    response.status(422).end();
     return;
   }
 
