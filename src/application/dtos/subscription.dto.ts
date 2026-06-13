@@ -12,6 +12,26 @@ export interface SubscriptionOutput {
   subscriptionId: string;
   status: SubscriptionStatus;
   expiresAt: Date | null;
+  cancelAtPeriodEnd: boolean;
+}
+
+export interface RenewSubscriptionInput {
+  userId: string;
+  paymentMethod: string;
+  idempotencyKey: string;
+}
+
+export interface RenewableSubscription {
+  subscriptionId: string;
+  userId: string;
+  planId: string;
+  status: SubscriptionStatus;
+  startedAt: Date;
+  expiresAt: Date | null;
+  cancelAtPeriodEnd: boolean;
+  billingPeriod: BillingPeriod | null;
+  price: number;
+  currency: string;
 }
 
 export interface SubscriptionQuery {

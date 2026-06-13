@@ -1,5 +1,6 @@
 import type { ErrorRequestHandler } from 'express';
 import {
+  ConflictError,
   ForbiddenError,
   IdempotencyConflictError,
   IdempotencyInProgressError,
@@ -30,12 +31,17 @@ export const errorHandler: ErrorRequestHandler = (error, _request, response, _ne
     response.status(404).end();
     return;
   }
-
-  if (error instanceof IdempotencyConflictError || error instanceof IdempotencyInProgressError) {
-    response.status(409).end();
+ 
+  if (error instanceof ConflictError) {
+    response.status(409).json({
+      type: 'about:blank',
+      title: 'Conflict',
+      status: 409,
+      detail: error.message,
+    });
     return;
   }
-
+  
   if (error instanceof InvalidPlanForCheckoutError) {
     response.status(422).end();
     return;

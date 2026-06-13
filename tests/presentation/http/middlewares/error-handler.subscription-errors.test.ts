@@ -1,6 +1,7 @@
 import express from 'express';
 import request from 'supertest';
 import {
+  ConflictError,
   ForbiddenError,
   IdempotencyConflictError,
   IdempotencyInProgressError,
@@ -68,5 +69,17 @@ describe('subscription error handling', () => {
 
     expect(response.status).toBe(422);
     expect(response.text).toBe('');
+  });
+  
+  it('returns problem details for subscription conflicts', async () => {
+    const response = await request(createApp(new ConflictError('Not renewable'))).get('/failure');
+
+    expect(response.status).toBe(409);
+    expect(response.body).toEqual({
+      type: 'about:blank',
+      title: 'Conflict',
+      status: 409,
+      detail: 'Not renewable',
+    });
   });
 });

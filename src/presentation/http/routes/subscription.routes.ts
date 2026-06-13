@@ -7,16 +7,20 @@ import type {
   PlanRepository,
   SubscriptionRepository,
 } from '../../../application/ports';
-import { notImplemented } from '../controllers';
-import { authenticate } from '../middlewares';
+import { createCheckoutSubscriptionController, notImplemented } from '../controllers';
+import { authenticate, validateBody } from '../middlewares';
 import {
-  createCheckoutSubscriptionController,
+  createCancelSubscriptionController,
+  createRenewSubscriptionController,
   createSubscriptionsController,
-} from '../controllers';
+} from '../controllers/subscriptions.controller';
 import {
+  CancelSubscriptionUseCase,
   CheckoutSubscriptionUseCase,
   GetSubscriptionsUseCase,
+  RenewSubscriptionUseCase,
 } from '../../../application/use-cases';
+import { renewSubscriptionBodySchema } from '../schemas';
 
 export interface SubscriptionRouterOptions {
   authProvider: AuthProvider;
@@ -37,6 +41,8 @@ export function createSubscriptionRouter({
 }: SubscriptionRouterOptions): Router {
   const router = Router();
   const getSubscriptionsUseCase = new GetSubscriptionsUseCase(subscriptionRepository);
+  const cancelSubscriptionUseCase = new CancelSubscriptionUseCase(subscriptionRepository);
+  const renewSubscriptionUseCase = new RenewSubscriptionUseCase(subscriptionRepository);
   const checkoutSubscriptionUseCase = new CheckoutSubscriptionUseCase(
     planRepository,
     idempotencyRepository,
@@ -49,8 +55,17 @@ export function createSubscriptionRouter({
     authenticate(authProvider),
     createCheckoutSubscriptionController(checkoutSubscriptionUseCase),
   );
-  router.patch('/cancel', notImplemented);
-  router.patch('/renew', notImplemented);
+  router.patch(
+    '/cancel',
+    authenticate(authProvider),
+    createCancelSubscriptionController(cancelSubscriptionUseCase),
+  );
+  router.patch(
+    '/renew',
+    authenticate(authProvider),
+    validateBody(renewSubscriptionBodySchema),
+    createRenewSubscriptionController(renewSubscriptionUseCase),
+  );
   router.get(
     '/',
     authenticate(authProvider),

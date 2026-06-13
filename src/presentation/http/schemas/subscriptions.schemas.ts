@@ -11,3 +11,10 @@ export const checkoutSubscriptionSchema = z.object({
 });
 
 export const idempotencyKeySchema = z.string().trim().min(1).max(255);
+
+export const renewSubscriptionBodySchema = z
+  .object({
+    paymentMethod: z.string().trim().min(1).max(255),
+    idempotencyKey: z.string().trim().min(8).max(255),
+  })
+  .strict();

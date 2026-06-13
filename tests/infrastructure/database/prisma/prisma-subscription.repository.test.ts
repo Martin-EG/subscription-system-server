@@ -90,4 +90,121 @@ describe('PrismaSubscriptionRepository', () => {
 
     await expect(repository.findCurrentByUserId('user-id')).resolves.toBeNull();
   });
+
+  it('finds the latest subscription eligible for renewal', async () => {
+    const findFirst = jest.fn().mockResolvedValue({
+      ...mappedSubscription,
+      status: 'CANCELLED',
+      expiresAt: new Date('2026-07-12T00:00:00.000Z'),
+      plan: {
+        ...mappedSubscription.plan,
+        price: { toNumber: () => 99 },
+        billingPeriod: 'MONTHLY',
+      },
+    });
+    const repository = new PrismaSubscriptionRepository({
+      subscription: { findFirst },
+    } as never);
+
+    await expect(repository.findRenewableByUserId('user-id')).resolves.toMatchObject({
+      subscriptionId: 'subscription-id',
+      status: 'CANCELLED',
+      billingPeriod: 'MONTHLY',
+    });
+    expect(findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          userId: 'user-id',
+          status: { in: ['ACTIVE', 'PAST_DUE', 'CANCELLED'] },
+        },
+      }),
+    );
+  });
+
+  it('schedules cancellation and preserves premium access until expiration', async () => {
+    const expiresAt = new Date('2026-07-12T00:00:00.000Z');
+    const transactionClient = {
+      subscription: {
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        findUnique: jest.fn().mockResolvedValue({
+          ...mappedSubscription,
+          expiresAt,
+          cancelAtPeriodEnd: true,
+        }),
+      },
+      userAccess: {
+        upsert: jest.fn().mockResolvedValue({}),
+      },
+    };
+    const transaction = jest
+      .fn()
+      .mockImplementation((callback: (client: typeof transactionClient) => unknown) =>
+        callback(transactionClient),
+      );
+    const repository = new PrismaSubscriptionRepository({
+      $transaction: transaction,
+    } as never);
+
+    await expect(
+      repository.scheduleCancellation({
+        subscriptionId: 'subscription-id',
+        userId: 'user-id',
+        cancelledAt: new Date('2026-06-13T00:00:00.000Z'),
+      }),
+    ).resolves.toMatchObject({ cancelAtPeriodEnd: true, expiresAt });
+    expect(transactionClient.userAccess.upsert).toHaveBeenCalledWith({
+      where: { userId: 'user-id' },
+      create: {
+        userId: 'user-id',
+        hasPremiumAccess: true,
+        validUntil: expiresAt,
+      },
+      update: {
+        hasPremiumAccess: true,
+        validUntil: expiresAt,
+      },
+    });
+  });
+
+  it('returns a completed renewal for a repeated idempotency key', async () => {
+    const transactionClient = {
+      idempotencyKey: {
+        findUnique: jest.fn().mockResolvedValue({
+          requestHash: 'request-hash',
+          status: 'COMPLETED',
+          responseBody: {
+            subscriptionId: 'subscription-id',
+            status: 'ACTIVE',
+            expiresAt: '2026-07-13T00:00:00.000Z',
+            cancelAtPeriodEnd: false,
+          },
+        }),
+      },
+    };
+    const transaction = jest
+      .fn()
+      .mockImplementation((callback: (client: typeof transactionClient) => unknown) =>
+        callback(transactionClient),
+      );
+    const repository = new PrismaSubscriptionRepository({
+      $transaction: transaction,
+    } as never);
+
+    await expect(
+      repository.renew({
+        subscriptionId: 'subscription-id',
+        userId: 'user-id',
+        startedAt: new Date('2026-06-13T00:00:00.000Z'),
+        expiresAt: new Date('2026-07-13T00:00:00.000Z'),
+        requestHash: 'request-hash',
+        idempotencyKey: 'renew-request-1',
+        idempotencyExpiresAt: new Date('2026-06-14T00:00:00.000Z'),
+      }),
+    ).resolves.toEqual({
+      subscriptionId: 'subscription-id',
+      status: 'ACTIVE',
+      expiresAt: new Date('2026-07-13T00:00:00.000Z'),
+      cancelAtPeriodEnd: false,
+    });
+  });
 });
