@@ -4,7 +4,7 @@ import { ConflictError, NotFoundError } from '../../../src/domain/errors';
 
 function createRepository(overrides: Partial<SubscriptionRepository> = {}) {
   return {
-    findCurrentByUserId: jest.fn(),
+    findByUserId: jest.fn(),
     findRenewableByUserId: jest.fn(),
     findAll: jest.fn(),
     scheduleCancellation: jest.fn(),

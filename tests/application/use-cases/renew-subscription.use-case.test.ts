@@ -15,12 +15,11 @@ import {
 
 function createDependencies() {
   const subscriptionRepository = {
-    findCurrentByUserId: jest.fn(),
+    findByUserId: jest.fn(),
     findRenewableByUserId: jest.fn(),
     findAll: jest.fn(),
     scheduleCancellation: jest.fn(),
     renew: jest.fn(),
-    save: jest.fn(),
   } as jest.Mocked<SubscriptionRepository>;
   const idempotencyRepository: jest.Mocked<IdempotencyRepository> = {
     claim: jest.fn().mockResolvedValue({

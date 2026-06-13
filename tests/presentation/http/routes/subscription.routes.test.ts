@@ -95,7 +95,7 @@ function createDependencies() {
       cancelAtPeriodEnd: false,
     }),
   };
-  const findCurrentByUserId = jest.fn().mockResolvedValue(subscription);
+  const findByUserId = jest.fn().mockResolvedValue(subscription);
   const renewableSubscription = {
     subscriptionId: 'premium-subscription-id',
     userId: 'user-id',
@@ -122,12 +122,11 @@ function createDependencies() {
     cancelAtPeriodEnd: false,
   });
   const subscriptionRepository: SubscriptionRepository = {
-    findCurrentByUserId,
+    findByUserId,
     findRenewableByUserId,
     findAll: jest.fn(),
     scheduleCancellation,
     renew,
-    save: jest.fn(),
   };
 
   return {
@@ -141,7 +140,7 @@ function createDependencies() {
     planId,
     processedAt,
     expiresAt,
-    findCurrentByUserId,
+    findByUserId,
     findRenewableByUserId,
     scheduleCancellation,
     renew,
@@ -186,7 +185,7 @@ describe('createSubscriptionRouter', () => {
 
     expect(response.status).toBe(200);
     expect(response.body).toMatchObject({ subscriptionId: 'subscription-id' });
-    expect(subscriptionRepository.findCurrentByUserId).toHaveBeenCalledWith('user-id');
+    expect(subscriptionRepository.findByUserId).toHaveBeenCalledWith('user-id');
   });
 
   it('returns 400 for invalid pagination', async () => {
@@ -197,6 +196,79 @@ describe('createSubscriptionRouter', () => {
       .set('Authorization', 'Bearer jwt-token');
 
     expect(response.status).toBe(400);
+  });
+
+  it('requires a bearer token for an administrative user lookup', async () => {
+    const { app, findByUserId } = createApp();
+
+    const response = await request(app).get('/subscriptions/550e8400-e29b-41d4-a716-446655440000');
+
+    expect(response.status).toBe(401);
+    expect(findByUserId).not.toHaveBeenCalled();
+  });
+
+  it('forbids regular users from looking up another user subscription', async () => {
+    const { app, findByUserId } = createApp();
+
+    const response = await request(app)
+      .get('/subscriptions/550e8400-e29b-41d4-a716-446655440000')
+      .set('Authorization', 'Bearer jwt-token');
+
+    expect(response.status).toBe(403);
+    expect(findByUserId).not.toHaveBeenCalled();
+  });
+
+  it('returns a target user subscription to an admin', async () => {
+    const { app, authProvider, findByUserId } = createApp();
+    const targetUserId = '550e8400-e29b-41d4-a716-446655440000';
+    authProvider.verifyAccessToken.mockResolvedValueOnce({
+      id: 'admin-id',
+      email: 'admin@example.com',
+      name: 'Admin',
+      role: 'ADMIN',
+    });
+
+    const response = await request(app)
+      .get(`/subscriptions/${targetUserId}`)
+      .set('Authorization', 'Bearer jwt-token');
+
+    expect(response.status).toBe(200);
+    expect(response.body).toMatchObject({ subscriptionId: 'subscription-id' });
+    expect(findByUserId).toHaveBeenCalledWith(targetUserId);
+  });
+
+  it('returns 400 for an invalid target user id', async () => {
+    const { app, authProvider, findByUserId } = createApp();
+    authProvider.verifyAccessToken.mockResolvedValueOnce({
+      id: 'admin-id',
+      email: 'admin@example.com',
+      name: 'Admin',
+      role: 'ADMIN',
+    });
+
+    const response = await request(app)
+      .get('/subscriptions/not-a-uuid')
+      .set('Authorization', 'Bearer jwt-token');
+
+    expect(response.status).toBe(400);
+    expect(findByUserId).not.toHaveBeenCalled();
+  });
+
+  it('returns 404 when the target user has no subscription', async () => {
+    const { app, authProvider, findByUserId } = createApp();
+    authProvider.verifyAccessToken.mockResolvedValueOnce({
+      id: 'admin-id',
+      email: 'admin@example.com',
+      name: 'Admin',
+      role: 'ADMIN',
+    });
+    findByUserId.mockResolvedValueOnce(null);
+
+    const response = await request(app)
+      .get('/subscriptions/550e8400-e29b-41d4-a716-446655440000')
+      .set('Authorization', 'Bearer jwt-token');
+
+    expect(response.status).toBe(404);
   });
 
   it('requires a bearer token to checkout a subscription', async () => {

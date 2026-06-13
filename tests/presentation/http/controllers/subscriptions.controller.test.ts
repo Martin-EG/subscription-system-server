@@ -1,8 +1,14 @@
 import express from 'express';
 import request from 'supertest';
 import type { SubscriptionDetailsOutput } from '../../../../src/application/dtos';
-import type { GetSubscriptionsUseCase } from '../../../../src/application/use-cases';
-import { createSubscriptionsController } from '../../../../src/presentation/http/controllers/subscriptions.controller';
+import type {
+  GetSubscriptionByUserIdUseCase,
+  GetSubscriptionsUseCase,
+} from '../../../../src/application/use-cases';
+import {
+  createSubscriptionByUserIdController,
+  createSubscriptionsController,
+} from '../../../../src/presentation/http/controllers/subscriptions.controller';
 import { errorHandler } from '../../../../src/presentation/http/middlewares';
 
 describe('createSubscriptionsController', () => {
@@ -58,5 +64,55 @@ describe('createSubscriptionsController', () => {
       page: 2,
       limit: 25,
     });
+  });
+
+  it('passes the authenticated admin and target user id to the use case', async () => {
+    const targetUserId = '550e8400-e29b-41d4-a716-446655440000';
+    const execute = jest.fn().mockResolvedValue({ ...subscription, userId: targetUserId });
+    const useCase = { execute } as unknown as GetSubscriptionByUserIdUseCase;
+    const app = express();
+
+    app.use((_request, response, next) => {
+      response.locals.authUser = {
+        id: 'admin-id',
+        email: 'admin@example.com',
+        name: 'Admin',
+        role: 'ADMIN',
+      };
+      next();
+    });
+    app.get('/subscriptions/:userId', createSubscriptionByUserIdController(useCase));
+    app.use(errorHandler);
+
+    const response = await request(app).get(`/subscriptions/${targetUserId}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body).toMatchObject({
+      subscriptionId: 'subscription-id',
+      userId: targetUserId,
+    });
+    expect(execute).toHaveBeenCalledWith({
+      currentUser: {
+        id: 'admin-id',
+        email: 'admin@example.com',
+        name: 'Admin',
+        role: 'ADMIN',
+      },
+      targetUserId,
+    });
+  });
+
+  it('returns 400 without executing the use case when user id is invalid', async () => {
+    const execute = jest.fn();
+    const useCase = { execute } as unknown as GetSubscriptionByUserIdUseCase;
+    const app = express();
+
+    app.get('/subscriptions/:userId', createSubscriptionByUserIdController(useCase));
+    app.use(errorHandler);
+
+    const response = await request(app).get('/subscriptions/not-a-uuid');
+
+    expect(response.status).toBe(400);
+    expect(execute).not.toHaveBeenCalled();
   });
 });

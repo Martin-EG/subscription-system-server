@@ -33,7 +33,7 @@ export class GetSubscriptionsUseCase {
       };
     }
 
-    const subscription = await this.subscriptionRepository.findCurrentByUserId(currentUser.id);
+    const subscription = await this.subscriptionRepository.findByUserId(currentUser.id);
 
     if (!subscription) {
       throw new NotFoundError('Subscription');

@@ -348,6 +348,7 @@ export const openApiDocument = {
               },
             },
           },
+          '400': { description: 'Invalid user id' },
           '401': { description: 'Missing or invalid access token' },
           '403': { description: 'The authenticated user is not an admin' },
           '404': { description: 'Current subscription not found' },

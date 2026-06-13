@@ -3,7 +3,20 @@ import {
   idempotencyKeySchema,
   paginationSchema,
   renewSubscriptionBodySchema,
+  subscriptionByUserIdSchema,
 } from '../../../../src/presentation/http/schemas/subscriptions.schemas';
+
+describe('subscriptionByUserIdSchema', () => {
+  it('accepts a UUID user id', () => {
+    expect(
+      subscriptionByUserIdSchema.safeParse('550e8400-e29b-41d4-a716-446655440000').success,
+    ).toBe(true);
+  });
+
+  it.each(['user-id', '', '550e8400-e29b-41d4-a716'])('rejects invalid UUID %s', (userId) => {
+    expect(subscriptionByUserIdSchema.safeParse(userId).success).toBe(false);
+  });
+});
 
 describe('paginationSchema', () => {
   it('applies pagination defaults', () => {

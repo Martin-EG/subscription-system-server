@@ -24,7 +24,7 @@ describe('GetSubscriptionsUseCase', () => {
 
   function createRepository(overrides: Partial<SubscriptionRepository> = {}) {
     return {
-      findCurrentByUserId: jest.fn(),
+      findByUserId: jest.fn(),
       findRenewableByUserId: jest.fn(),
       findAll: jest.fn(),
       scheduleCancellation: jest.fn(),
@@ -35,10 +35,10 @@ describe('GetSubscriptionsUseCase', () => {
   }
 
   it('returns only the authenticated regular user current subscription', async () => {
-    const findCurrentByUserId = jest.fn().mockResolvedValue(subscription);
+    const findByUserId = jest.fn().mockResolvedValue(subscription);
     const findAll = jest.fn();
     const repository = createRepository({
-      findCurrentByUserId,
+      findByUserId,
       findAll,
     });
     const useCase = new GetSubscriptionsUseCase(repository);
@@ -52,18 +52,18 @@ describe('GetSubscriptionsUseCase', () => {
     await expect(useCase.execute({ currentUser, page: 1, limit: 20 })).resolves.toEqual(
       subscription,
     );
-    expect(findCurrentByUserId).toHaveBeenCalledWith('user-id');
+    expect(findByUserId).toHaveBeenCalledWith('user-id');
     expect(findAll).not.toHaveBeenCalled();
   });
 
   it('returns paginated subscriptions for an admin', async () => {
-    const findCurrentByUserId = jest.fn();
+    const findByUserId = jest.fn();
     const findAll = jest.fn().mockResolvedValue({
       items: [subscription],
       total: 1,
     });
     const repository = createRepository({
-      findCurrentByUserId,
+      findByUserId,
       findAll,
     });
     const useCase = new GetSubscriptionsUseCase(repository);
@@ -81,12 +81,12 @@ describe('GetSubscriptionsUseCase', () => {
       limit: 10,
     });
     expect(findAll).toHaveBeenCalledWith({ page: 2, limit: 10 });
-    expect(findCurrentByUserId).not.toHaveBeenCalled();
+    expect(findByUserId).not.toHaveBeenCalled();
   });
 
   it('throws NotFoundError when a regular user has no current subscription', async () => {
     const repository = createRepository({
-      findCurrentByUserId: jest.fn().mockResolvedValue(null),
+      findByUserId: jest.fn().mockResolvedValue(null),
     });
     const useCase = new GetSubscriptionsUseCase(repository);
     const currentUser: AuthenticatedUser = {
@@ -102,10 +102,10 @@ describe('GetSubscriptionsUseCase', () => {
   });
 
   it('does not grant admin access to an unknown or missing role', async () => {
-    const findCurrentByUserId = jest.fn().mockResolvedValue(subscription);
+    const findByUserId = jest.fn().mockResolvedValue(subscription);
     const findAll = jest.fn();
     const repository = createRepository({
-      findCurrentByUserId,
+      findByUserId,
       findAll,
     });
     const useCase = new GetSubscriptionsUseCase(repository);
@@ -118,7 +118,7 @@ describe('GetSubscriptionsUseCase', () => {
 
     await useCase.execute({ currentUser, page: 1, limit: 20 });
 
-    expect(findCurrentByUserId).toHaveBeenCalledWith('user-id');
+    expect(findByUserId).toHaveBeenCalledWith('user-id');
     expect(findAll).not.toHaveBeenCalled();
   });
 });

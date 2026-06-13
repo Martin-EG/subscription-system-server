@@ -2,6 +2,7 @@ export * from './cancel-subscription.use-case';
 export * from './checkout-subscription.use-case';
 export * from './expire-subscriptions.use-case';
 export * from './get-payment-logs.use-case';
+export * from './get-subscription-by-userId.use-case';
 export * from './get-subscriptions.use-case';
 export * from './login.use-case';
 export * from './publish-payment-notifications.use-case';

@@ -2,10 +2,11 @@ import type { RequestHandler } from 'express';
 import type { AuthenticatedUser, RenewSubscriptionInput } from '../../../application/dtos';
 import type {
   CancelSubscriptionUseCase,
+  GetSubscriptionByUserIdUseCase,
   GetSubscriptionsUseCase,
   RenewSubscriptionUseCase,
 } from '../../../application/use-cases';
-import { paginationSchema } from '../schemas/subscriptions.schemas';
+import { paginationSchema, subscriptionByUserIdSchema } from '../schemas/subscriptions.schemas';
 
 export function createCancelSubscriptionController(
   cancelSubscriptionUseCase: CancelSubscriptionUseCase,
@@ -63,6 +64,36 @@ export function createSubscriptionsController(
         currentUser,
         page: pagination.data.page,
         limit: pagination.data.limit,
+      });
+
+      response.status(200).json(result);
+    } catch (error) {
+      next(error);
+    }
+  };
+}
+
+export function createSubscriptionByUserIdController(
+  getSubscriptionByUserIdUseCase: GetSubscriptionByUserIdUseCase,
+): RequestHandler {
+  return async (request, response, next) => {
+    try {
+      const requestBody = subscriptionByUserIdSchema.safeParse(request.params.userId);
+
+      if (!requestBody.success) {
+        response.status(400).json({
+          type: 'about:blank',
+          title: 'Bad Request',
+          status: 400,
+        });
+
+        return;
+      }
+
+      const currentUser = response.locals.authUser as AuthenticatedUser;
+      const result = await getSubscriptionByUserIdUseCase.execute({
+        currentUser,
+        targetUserId: requestBody.data,
       });
 
       response.status(200).json(result);

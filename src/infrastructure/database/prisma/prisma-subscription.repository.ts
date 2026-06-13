@@ -6,8 +6,7 @@ import type {
   SubscriptionRepository,
   SubscriptionSearchResult,
 } from '../../../application/ports';
-import type { Subscription } from '../../../domain/entities';
-import { ConflictError, NotImplementedError, NotFoundError } from '../../../domain/errors';
+import { ConflictError, NotFoundError } from '../../../domain/errors';
 import type { Prisma, PrismaClient } from '../../../generated/prisma/client.js';
 import {
   IdempotencyOperation,
@@ -44,7 +43,7 @@ const mapSubscriptionData: MapSubscriptionData = (subscription) => ({
 export class PrismaSubscriptionRepository implements SubscriptionRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
-  async findCurrentByUserId(userId: string): Promise<SubscriptionDetailsOutput | null> {
+  async findByUserId(userId: string): Promise<SubscriptionDetailsOutput | null> {
     const subscription = await this.prisma.subscription.findFirst({
       where: {
         userId,
@@ -288,9 +287,5 @@ export class PrismaSubscriptionRepository implements SubscriptionRepository {
 
       return response;
     });
-  }
-
-  save(_subscription: Subscription): Promise<void> {
-    return Promise.reject(new NotImplementedError('Prisma subscription repository'));
   }
 }

@@ -8,16 +8,18 @@ import type {
   RenewalTransactionPort,
   SubscriptionRepository,
 } from '../../../application/ports';
-import { createCheckoutSubscriptionController, notImplemented } from '../controllers';
+import { createCheckoutSubscriptionController } from '../controllers';
 import { authenticate, validateBody } from '../middlewares';
 import {
   createCancelSubscriptionController,
   createRenewSubscriptionController,
+  createSubscriptionByUserIdController,
   createSubscriptionsController,
 } from '../controllers/subscriptions.controller';
 import {
   CancelSubscriptionUseCase,
   CheckoutSubscriptionUseCase,
+  GetSubscriptionByUserIdUseCase,
   GetSubscriptionsUseCase,
   RenewSubscriptionUseCase,
 } from '../../../application/use-cases';
@@ -44,6 +46,7 @@ export function createSubscriptionRouter({
 }: SubscriptionRouterOptions): Router {
   const router = Router();
   const getSubscriptionsUseCase = new GetSubscriptionsUseCase(subscriptionRepository);
+  const getSubscriptionByUserIdUseCase = new GetSubscriptionByUserIdUseCase(subscriptionRepository);
   const cancelSubscriptionUseCase = new CancelSubscriptionUseCase(subscriptionRepository);
   const renewSubscriptionUseCase = new RenewSubscriptionUseCase(
     subscriptionRepository,
@@ -79,7 +82,11 @@ export function createSubscriptionRouter({
     authenticate(authProvider),
     createSubscriptionsController(getSubscriptionsUseCase),
   );
-  router.get('/:userId', notImplemented);
+  router.get(
+    '/:userId',
+    authenticate(authProvider),
+    createSubscriptionByUserIdController(getSubscriptionByUserIdUseCase),
+  );
 
   return router;
 }

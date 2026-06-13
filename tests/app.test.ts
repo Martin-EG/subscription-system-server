@@ -41,12 +41,11 @@ describe('HTTP application scaffold', () => {
     completeRenewal: jest.fn(),
   };
   const subscriptionRepository: jest.Mocked<SubscriptionRepository> = {
-    findCurrentByUserId: jest.fn(),
+    findByUserId: jest.fn(),
     findRenewableByUserId: jest.fn(),
     findAll: jest.fn(),
     scheduleCancellation: jest.fn(),
     renew: jest.fn(),
-    save: jest.fn(),
   };
   const app = createApp({
     authProvider,

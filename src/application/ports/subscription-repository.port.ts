@@ -1,4 +1,3 @@
-import type { Subscription } from '../../domain/entities';
 import type { RenewableSubscription, SubscriptionDetailsOutput, SubscriptionOutput } from '../dtos';
 
 export interface FindSubscriptionQuery {
@@ -28,10 +27,9 @@ export interface RenewSubscriptionPersistenceInput {
 }
 
 export interface SubscriptionRepository {
-  findCurrentByUserId(userId: string): Promise<SubscriptionDetailsOutput | null>;
+  findByUserId(userId: string): Promise<SubscriptionDetailsOutput | null>;
   findRenewableByUserId(userId: string): Promise<RenewableSubscription | null>;
   findAll(query: FindSubscriptionQuery): Promise<SubscriptionSearchResult>;
   scheduleCancellation(input: ScheduleCancellationInput): Promise<SubscriptionOutput>;
   renew(input: RenewSubscriptionPersistenceInput): Promise<SubscriptionOutput>;
-  save(subscription: Subscription): Promise<void>;
 }

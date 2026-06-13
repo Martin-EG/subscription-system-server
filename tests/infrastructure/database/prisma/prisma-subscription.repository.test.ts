@@ -31,7 +31,7 @@ describe('PrismaSubscriptionRepository', () => {
     };
     const repository = new PrismaSubscriptionRepository(prisma as never);
 
-    await expect(repository.findCurrentByUserId('user-id')).resolves.toMatchObject({
+    await expect(repository.findByUserId('user-id')).resolves.toMatchObject({
       subscriptionId: 'subscription-id',
       userId: 'user-id',
     });
@@ -102,7 +102,7 @@ describe('PrismaSubscriptionRepository', () => {
     };
     const repository = new PrismaSubscriptionRepository(prisma as never);
 
-    await expect(repository.findCurrentByUserId('user-id')).resolves.toBeNull();
+    await expect(repository.findByUserId('user-id')).resolves.toBeNull();
   });
 
   it('finds the latest subscription eligible for renewal', async () => {
@@ -129,7 +129,7 @@ describe('PrismaSubscriptionRepository', () => {
       expect.objectContaining({
         where: {
           userId: 'user-id',
-          status: { in: ['ACTIVE', 'PAST_DUE', 'CANCELLED'] },
+          status: { in: ['ACTIVE', 'PAST_DUE', 'CANCELLED', 'EXPIRED'] },
         },
       }),
     );
