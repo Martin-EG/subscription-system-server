@@ -7,7 +7,6 @@ import type {
 import type { Subscription } from '../../../domain/entities';
 import { NotImplementedError } from '../../../domain/errors';
 import type { Prisma, PrismaClient } from '../../../generated/prisma/client.js';
-import { SubscriptionStatus } from '../../../generated/prisma/enums';
 
 type SubscriptionWithRelations = Prisma.SubscriptionGetPayload<{
   include: {
