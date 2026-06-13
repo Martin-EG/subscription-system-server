@@ -294,6 +294,9 @@ Authorization: Bearer <admin_access_token>
 
 ## Commands
 
+The [manual endpoint testing guide](docs/manual-endpoint-tests.md) provides a reproducible
+PowerShell sequence for validating the main API flows.
+
 ```bash
 npm run dev
 npm run build

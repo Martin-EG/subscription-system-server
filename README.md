@@ -285,6 +285,9 @@ Authorization: Bearer <admin_access_token>
 
 ## Comandos
 
+La guía [Pruebas manuales de endpoints](docs/manual-endpoint-tests.md) contiene una
+secuencia reproducible para validar los flujos principales con PowerShell.
+
 ```bash
 npm run dev
 npm run build
