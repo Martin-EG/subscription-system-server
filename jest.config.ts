@@ -4,6 +4,7 @@ const config: Config = {
   preset: 'ts-jest',
   testEnvironment: 'node',
   roots: ['<rootDir>/tests'],
+  testPathIgnorePatterns: ['/node_modules/', '<rootDir>/tests/integration/'],
   clearMocks: true,
   collectCoverage: true,
   collectCoverageFrom: [

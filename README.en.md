@@ -296,6 +296,8 @@ Authorization: Bearer <admin_access_token>
 
 The [manual endpoint testing guide](docs/manual-endpoint-tests.md) provides a reproducible
 PowerShell sequence for validating the main API flows.
+The [real PostgreSQL integration guide](docs/postgresql-integration-tests.md) describes
+the checkout commit and rollback test executed against an ephemeral database.
 
 ```bash
 npm run dev
@@ -303,6 +305,7 @@ npm run build
 npm run typecheck
 npm run lint
 npm test
+npm run test:integration
 npm run test:coverage
 npm run prisma:validate
 npm run supabase:seed-users

@@ -21,6 +21,7 @@
     "scripts/**/*.ts",
     "tests/**/*.ts",
     "jest.config.ts",
+    "jest.integration.config.ts",
     "prisma.config.ts",
     "eslint.config.mjs"
   ],
