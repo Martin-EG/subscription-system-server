@@ -1,23 +1,54 @@
 import { Router } from 'express';
-import type { AuthProvider, SubscriptionRepository } from '../../../application/ports';
+import type {
+  AuthProvider,
+  CheckoutTransactionPort,
+  IdempotencyRepository,
+  PaymentProcessor,
+  PlanRepository,
+  SubscriptionRepository,
+} from '../../../application/ports';
 import { notImplemented } from '../controllers';
 import { authenticate } from '../middlewares';
-import { createSubscriptionsController } from '../controllers/subscriptions.controller';
-import { GetSubscriptionsUseCase } from '../../../application/use-cases';
+import {
+  createCheckoutSubscriptionController,
+  createSubscriptionsController,
+} from '../controllers';
+import {
+  CheckoutSubscriptionUseCase,
+  GetSubscriptionsUseCase,
+} from '../../../application/use-cases';
 
 export interface SubscriptionRouterOptions {
   authProvider: AuthProvider;
   subscriptionRepository: SubscriptionRepository;
+  planRepository: PlanRepository;
+  idempotencyRepository: IdempotencyRepository;
+  paymentProcessor: PaymentProcessor;
+  checkoutTransaction: CheckoutTransactionPort;
 }
 
 export function createSubscriptionRouter({
   authProvider,
+  checkoutTransaction,
+  idempotencyRepository,
+  paymentProcessor,
+  planRepository,
   subscriptionRepository,
 }: SubscriptionRouterOptions): Router {
   const router = Router();
   const getSubscriptionsUseCase = new GetSubscriptionsUseCase(subscriptionRepository);
+  const checkoutSubscriptionUseCase = new CheckoutSubscriptionUseCase(
+    planRepository,
+    idempotencyRepository,
+    paymentProcessor,
+    checkoutTransaction,
+  );
 
-  router.post('/checkout', notImplemented);
+  router.post(
+    '/checkout',
+    authenticate(authProvider),
+    createCheckoutSubscriptionController(checkoutSubscriptionUseCase),
+  );
   router.patch('/cancel', notImplemented);
   router.patch('/renew', notImplemented);
   router.get(

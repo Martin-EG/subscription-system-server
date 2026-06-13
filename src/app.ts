@@ -1,7 +1,14 @@
 import express from 'express';
 import swaggerUi from 'swagger-ui-express';
 
-import type { AuthProvider, SubscriptionRepository } from './application/ports';
+import type {
+  AuthProvider,
+  CheckoutTransactionPort,
+  IdempotencyRepository,
+  PaymentProcessor,
+  PlanRepository,
+  SubscriptionRepository,
+} from './application/ports';
 import { UnauthorizedError } from './domain/errors';
 import { createSupabaseAuthProvider } from './infrastructure/auth';
 import { env } from './infrastructure/config/env.js';
@@ -16,6 +23,10 @@ import {
 
 export interface AppDependencies {
   authProvider: AuthProvider;
+  checkoutTransaction: CheckoutTransactionPort;
+  idempotencyRepository: IdempotencyRepository;
+  paymentProcessor: PaymentProcessor;
+  planRepository: PlanRepository;
   subscriptionRepository: SubscriptionRepository;
 }
 
@@ -32,7 +43,14 @@ export function getDefaultAuthProvider(): AuthProvider {
   return createSupabaseAuthProvider(env.SUPABASE_URL, env.SUPABASE_ANON_KEY);
 }
 
-export function createApp({ authProvider, subscriptionRepository }: AppDependencies) {
+export function createApp({
+  authProvider,
+  checkoutTransaction,
+  idempotencyRepository,
+  paymentProcessor,
+  planRepository,
+  subscriptionRepository,
+}: AppDependencies) {
   const app = express();
 
   app.disable('x-powered-by');
@@ -50,6 +68,10 @@ export function createApp({ authProvider, subscriptionRepository }: AppDependenc
     '/api/v1/subscriptions',
     createSubscriptionRouter({
       authProvider,
+      checkoutTransaction,
+      idempotencyRepository,
+      paymentProcessor,
+      planRepository,
       subscriptionRepository,
     }),
   );
