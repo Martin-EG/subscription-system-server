@@ -1,10 +1,22 @@
 import express from 'express';
 import request from 'supertest';
-import type { AuthProvider, SubscriptionRepository } from '../../../../src/application/ports';
+import type {
+  AuthProvider,
+  CheckoutTransactionPort,
+  IdempotencyRepository,
+  PaymentProcessor,
+  PlanRepository,
+  SubscriptionRepository,
+} from '../../../../src/application/ports';
 import { errorHandler } from '../../../../src/presentation/http/middlewares';
 import { createSubscriptionRouter } from '../../../../src/presentation/http/routes';
 
+/* eslint-disable @typescript-eslint/unbound-method -- Jest replaces these interface methods with bound mock functions. */
+
 function createDependencies() {
+  const planId = '0198f076-649b-752b-856b-756c32f0be8d';
+  const processedAt = new Date('2026-06-13T12:01:00.000Z');
+  const expiresAt = new Date('2026-07-13T12:01:00.000Z');
   const subscription = {
     subscriptionId: 'subscription-id',
     userId: 'user-id',
@@ -22,7 +34,7 @@ function createDependencies() {
     expiresAt: null,
     cancelAtPeriodEnd: false,
   };
-  const authProvider: AuthProvider = {
+  const authProvider: jest.Mocked<AuthProvider> = {
     login: jest.fn(),
     verifyAccessToken: jest.fn().mockResolvedValue({
       id: 'user-id',
@@ -31,23 +43,80 @@ function createDependencies() {
       role: 'USER',
     }),
   };
-  const findCurrentByUserId = jest.fn().mockResolvedValue(subscription);
-  const subscriptionRepository: SubscriptionRepository = {
-    findCurrentByUserId,
+  const checkoutTransaction: jest.Mocked<CheckoutTransactionPort> = {
+    completeCheckout: jest.fn().mockResolvedValue({
+      subscriptionId: 'subscription-id',
+      status: 'ACTIVE',
+      expiresAt,
+    }),
+  };
+  const idempotencyRepository: jest.Mocked<IdempotencyRepository> = {
+    claim: jest.fn().mockResolvedValue({
+      outcome: 'CLAIMED',
+      record: {
+        id: 'idempotency-id',
+        key: 'checkout-key',
+        userId: 'user-id',
+        operation: 'CHECKOUT',
+        requestHash: 'request-hash',
+        status: 'PROCESSING',
+        responseStatus: null,
+        responseBody: null,
+        resourceId: null,
+        createdAt: new Date('2026-06-13T12:00:00.000Z'),
+        expiresAt: new Date('2026-06-13T12:05:00.000Z'),
+      },
+    }),
+    markFailed: jest.fn(),
+  };
+  const paymentProcessor: jest.Mocked<PaymentProcessor> = {
+    process: jest.fn().mockResolvedValue({
+      transactionId: 'transaction-id',
+      status: 'SUCCEEDED',
+      processedAt,
+    }),
+  };
+  const planRepository: jest.Mocked<PlanRepository> = {
+    findById: jest.fn().mockResolvedValue({
+      id: planId,
+      name: 'Premium monthly',
+      price: 99,
+      currency: 'MXN',
+      billingPeriod: 'MONTHLY',
+    }),
+    findAll: jest.fn(),
+  };
+  const subscriptionRepository: jest.Mocked<SubscriptionRepository> = {
+    findCurrentByUserId: jest.fn().mockResolvedValue(subscription),
     findAll: jest.fn(),
     save: jest.fn(),
   };
 
-  return { authProvider, subscriptionRepository, findCurrentByUserId };
+  return {
+    authProvider,
+    checkoutTransaction,
+    idempotencyRepository,
+    paymentProcessor,
+    planRepository,
+    subscriptionRepository,
+    planId,
+    processedAt,
+    expiresAt,
+  };
 }
 
 function createApp() {
   const dependencies = createDependencies();
   const app = express();
+  app.use(express.json());
   app.use(
     '/subscriptions',
     createSubscriptionRouter({
       authProvider: dependencies.authProvider,
+      checkoutTransaction: dependencies.checkoutTransaction,
+      idempotencyRepository: dependencies.idempotencyRepository,
+      paymentProcessor: dependencies.paymentProcessor,
+      planRepository: dependencies.planRepository,
       subscriptionRepository: dependencies.subscriptionRepository,
     }),
   );
@@ -65,7 +134,7 @@ describe('createSubscriptionRouter', () => {
   });
 
   it('returns the current subscription with default pagination', async () => {
-    const { app, findCurrentByUserId } = createApp();
+    const { app, subscriptionRepository } = createApp();
 
     const response = await request(app)
       .get('/subscriptions')
@@ -73,7 +142,7 @@ describe('createSubscriptionRouter', () => {
 
     expect(response.status).toBe(200);
     expect(response.body).toMatchObject({ subscriptionId: 'subscription-id' });
-    expect(findCurrentByUserId).toHaveBeenCalledWith('user-id');
+    expect(subscriptionRepository.findCurrentByUserId).toHaveBeenCalledWith('user-id');
   });
 
   it('returns 400 for invalid pagination', async () => {
@@ -84,5 +153,72 @@ describe('createSubscriptionRouter', () => {
       .set('Authorization', 'Bearer jwt-token');
 
     expect(response.status).toBe(400);
+  });
+
+  it('requires a bearer token to checkout a subscription', async () => {
+    const { app, planId, idempotencyRepository } = createApp();
+
+    const response = await request(app)
+      .post('/subscriptions/checkout')
+      .set('Idempotency-Key', 'checkout-key')
+      .send({
+        planId,
+        paymentMethod: 'simulated-card',
+      });
+
+    expect(response.status).toBe(401);
+    expect(idempotencyRepository.claim).not.toHaveBeenCalled();
+  });
+
+  it('returns 400 when the checkout request is invalid', async () => {
+    const { app, idempotencyRepository } = createApp();
+
+    const response = await request(app)
+      .post('/subscriptions/checkout')
+      .set('Authorization', 'Bearer jwt-token')
+      .send({
+        planId: 'not-a-uuid',
+        paymentMethod: '',
+      });
+
+    expect(response.status).toBe(400);
+    expect(idempotencyRepository.claim).not.toHaveBeenCalled();
+  });
+
+  it('routes a valid checkout through its dependencies', async () => {
+    const { app, planId, expiresAt, planRepository, paymentProcessor, checkoutTransaction } =
+      createApp();
+
+    const response = await request(app)
+      .post('/subscriptions/checkout')
+      .set('Authorization', 'Bearer jwt-token')
+      .set('Idempotency-Key', 'checkout-key')
+      .send({
+        planId,
+        paymentMethod: 'simulated-card',
+      });
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({
+      subscriptionId: 'subscription-id',
+      status: 'ACTIVE',
+      expiresAt: expiresAt.toISOString(),
+    });
+    expect(planRepository.findById).toHaveBeenCalledWith(planId);
+    expect(paymentProcessor.process).toHaveBeenCalledWith({
+      userId: 'user-id',
+      amount: 99,
+      currency: 'MXN',
+      paymentMethod: 'simulated-card',
+      idempotencyKey: 'checkout-key',
+    });
+    expect(checkoutTransaction.completeCheckout).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'user-id',
+        planId,
+        idempotencyId: 'idempotency-id',
+        transactionId: 'transaction-id',
+      }),
+    );
   });
 });

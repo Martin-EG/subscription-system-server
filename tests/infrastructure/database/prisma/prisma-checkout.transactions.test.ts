@@ -122,7 +122,7 @@ describe('PrismaCheckoutTransaction', () => {
       data: {
         status: 'COMPLETED',
         resourceId: 'subscription-id',
-        responseStatus: 201,
+        responseStatus: 200,
         responseBody: {
           subscriptionId: 'subscription-id',
           status: 'ACTIVE',

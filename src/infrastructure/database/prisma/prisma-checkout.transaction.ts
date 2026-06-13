@@ -88,7 +88,7 @@ export class PrismaCheckoutTransaction implements CheckoutTransactionPort {
         data: {
           status: IdempotencyStatus.COMPLETED,
           resourceId: subscription.id,
-          responseStatus: 201,
+          responseStatus: 200,
           responseBody: {
             subscriptionId: result.subscriptionId,
             status: result.status,
