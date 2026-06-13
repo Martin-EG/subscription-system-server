@@ -11,7 +11,6 @@ const config: Config = {
     '!src/main.ts',
     '!src/**/*.d.ts',
     '!src/application/use-cases/cancel-subscription.use-case.ts',
-    '!src/application/use-cases/checkout-subscription.use-case.ts',
     '!src/application/use-cases/get-payment-logs.use-case.ts',
     '!src/application/use-cases/renew-subscription.use-case.ts',
     '!src/domain/errors/not-implemented.error.ts',

@@ -1,4 +1,5 @@
-import type { FindPlanQuery, PlanRepository, PlanSearchResult } from '../../../application/ports';
+import type { FindPlanQuery, PlanSearchResult } from '../../../application/dtos';
+import type { PlanRepository } from '../../../application/ports';
 import type { Plan } from '../../../domain/entities';
 import type { Plan as PrismaPlan, PrismaClient } from '../../../generated/prisma/client';
 

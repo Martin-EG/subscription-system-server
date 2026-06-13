@@ -1,3 +1,9 @@
+jest.mock('../../../../src/generated/prisma/client.js', () => ({
+  Prisma: {
+    DbNull: 'DB_NULL',
+  },
+}));
+
 import { PrismaIdempotencyRepository } from '../../../../src/infrastructure/database/prisma/prisma-idempotency.repository';
 
 describe('PrismaIdempotencyRepository', () => {
@@ -74,20 +80,14 @@ describe('PrismaIdempotencyRepository', () => {
         responseBody: { subscriptionId: 'subscription-id' },
       },
     },
-    {
-      name: 'reports a failed or expired operation',
-      existing: {
-        ...record,
-        expiresAt: new Date('2026-06-12T12:00:00.000Z'),
-      },
-      expected: { outcome: 'FAILED' },
-    },
   ])('$name after a duplicate key conflict', async ({ existing, expected }) => {
     const findUniqueOrThrow = jest.fn().mockResolvedValue(existing);
+    const updateMany = jest.fn().mockResolvedValue({ count: 0 });
     const prisma = {
       idempotencyKey: {
         create: jest.fn().mockRejectedValue({ code: 'P2002' }),
         findUniqueOrThrow,
+        updateMany,
       },
     };
     const repository = new PrismaIdempotencyRepository(prisma as never);
@@ -101,6 +101,58 @@ describe('PrismaIdempotencyRepository', () => {
           key: input.key,
         },
       },
+    });
+  });
+
+  it('reclaims an expired idempotency operation', async () => {
+    const expiredRecord = {
+      ...record,
+      expiresAt: new Date('2026-06-12T12:00:00.000Z'),
+    };
+    const reclaimedRecord = {
+      ...record,
+      expiresAt: input.expiresAt,
+    };
+    const findUniqueOrThrow = jest
+      .fn()
+      .mockResolvedValueOnce(expiredRecord)
+      .mockResolvedValueOnce(reclaimedRecord);
+    const updateMany = jest.fn().mockResolvedValue({ count: 1 });
+    const prisma = {
+      idempotencyKey: {
+        create: jest.fn().mockRejectedValue({ code: 'P2002' }),
+        findUniqueOrThrow,
+        updateMany,
+      },
+    };
+    const repository = new PrismaIdempotencyRepository(prisma as never);
+
+    await expect(repository.claim(input)).resolves.toEqual({
+      outcome: 'CLAIMED',
+      record: reclaimedRecord,
+    });
+    expect(updateMany).toHaveBeenCalledWith({
+      where: {
+        id: expiredRecord.id,
+        requestHash: input.requestHash,
+        OR: [
+          { status: 'FAILED' },
+          {
+            status: 'PROCESSING',
+            expiresAt: { lte: now },
+          },
+        ],
+      },
+      data: {
+        status: 'PROCESSING',
+        expiresAt: input.expiresAt,
+        responseStatus: null,
+        responseBody: 'DB_NULL',
+        resourceId: null,
+      },
+    });
+    expect(findUniqueOrThrow).toHaveBeenLastCalledWith({
+      where: { id: expiredRecord.id },
     });
   });
 

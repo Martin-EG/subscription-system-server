@@ -11,4 +11,6 @@ export interface ClaimIdempotencyInput {
 export type ClaimIdempotencyResult =
   | { outcome: 'CLAIMED', record: IdempotencyKey }
   | { outcome: 'REPLAY', responseStatus: number, responseBody: unknown }
-  | { outcome: 'IN_PROGRESS' | 'PAYLOAD_MISMATCH' | 'FAILED' }
+  | { outcome: 'IN_PROGRESS' }
+  | { outcome: 'PAYLOAD_MISMATCH' }
+  | { outcome: 'FAILED' }
