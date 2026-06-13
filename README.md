@@ -289,6 +289,8 @@ La guía [Pruebas manuales de endpoints](docs/manual-endpoint-tests.md) contiene
 secuencia reproducible para validar los flujos principales con PowerShell.
 La guía [Integración real con PostgreSQL](docs/postgresql-integration-tests.md) explica
 la prueba transaccional de checkout y rollback ejecutada contra una base efímera.
+El [plan de CI y readiness](docs/ci-readiness-plan.md) describe el trabajo restante para
+automatizar validaciones y preparar probes de despliegue.
 
 ```bash
 npm run dev

@@ -298,6 +298,8 @@ The [manual endpoint testing guide](docs/manual-endpoint-tests.md) provides a re
 PowerShell sequence for validating the main API flows.
 The [real PostgreSQL integration guide](docs/postgresql-integration-tests.md) describes
 the checkout commit and rollback test executed against an ephemeral database.
+The [CI and readiness plan](docs/ci-readiness-plan.md) describes the remaining work for
+automated validation and deployment probes.
 
 ```bash
 npm run dev
