@@ -3,7 +3,8 @@ export const openApiDocument = {
   info: {
     title: 'Subscription System API',
     version: '0.1.0',
-    description: 'Placeholder API. Business operations currently return HTTP 501.',
+    description:
+      'API for authentication, premium subscription checkout, and subscription management.',
   },
   servers: [{ url: 'http://localhost:3000' }],
   components: {
@@ -32,6 +33,34 @@ export const openApiDocument = {
           access_token: { type: 'string', description: 'Supabase JWT access token.' },
           expires_in: { type: 'integer', description: 'Token lifetime in seconds.' },
           user: { $ref: '#/components/schemas/AuthUser' },
+        },
+      },
+      CheckoutSubscriptionRequest: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['planId', 'paymentMethod'],
+        properties: {
+          planId: {
+            type: 'string',
+            format: 'uuid',
+            examples: ['99902751-fb7d-4d2f-9716-6eca142b060e'],
+          },
+          paymentMethod: {
+            type: 'string',
+            minLength: 1,
+            maxLength: 100,
+            examples: ['simulated-card'],
+          },
+        },
+      },
+      CheckoutSubscriptionResponse: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['subscriptionId', 'status', 'expiresAt'],
+        properties: {
+          subscriptionId: { type: 'string', format: 'uuid' },
+          status: { type: 'string', enum: ['ACTIVE'] },
+          expiresAt: { type: ['string', 'null'], format: 'date-time' },
         },
       },
       SubscriptionPlan: {
@@ -138,7 +167,52 @@ export const openApiDocument = {
     '/api/v1/subscriptions/checkout': {
       post: {
         summary: 'Activate a premium subscription',
-        responses: { '501': { description: 'Placeholder' } },
+        description:
+          'Processes a simulated payment and activates the selected premium plan for the authenticated user. Reusing the same Idempotency-Key with the same payload returns the previously completed result.',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'Idempotency-Key',
+            in: 'header',
+            required: true,
+            description:
+              'Unique key for this logical checkout operation. Reuse it only when retrying the same request.',
+            schema: {
+              type: 'string',
+              minLength: 1,
+              maxLength: 255,
+              examples: ['582535a4-d18c-4264-8b4b-bb38d1d76438'],
+            },
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/CheckoutSubscriptionRequest' },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Subscription activated or completed checkout replayed',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/CheckoutSubscriptionResponse' },
+              },
+            },
+          },
+          '400': { description: 'Invalid request body or missing Idempotency-Key' },
+          '401': { description: 'Missing or invalid access token' },
+          '402': { description: 'Simulated payment was declined' },
+          '404': { description: 'Selected plan was not found' },
+          '409': {
+            description:
+              'Idempotency key was reused with a different payload or the original request is still processing',
+          },
+          '422': { description: 'Selected plan cannot be purchased through checkout' },
+          '500': { description: 'Unexpected server or database error' },
+        },
       },
     },
     '/api/v1/subscriptions/cancel': {

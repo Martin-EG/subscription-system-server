@@ -8,15 +8,13 @@ users can subscribe to a plan, manage renewals and cancellations, review their c
 subscription, and obtain or lose access to premium features according to their
 entitlements.
 
-The system is designed to eventually coordinate payment processing, subscription
-lifecycle management, premium access, payment auditing and asynchronous notifications.
-Administrators will also be able to review subscription and payment information across
-all users.
+The system currently supports Supabase authentication, subscription queries and premium
+plan activation through a simulated-payment checkout. Checkout is idempotent and updates
+the subscription, premium access, payment log and pending notification in one PostgreSQL
+transaction.
 
-This repository is currently an architectural scaffold. It defines the API contracts,
-domain models, database setup and integration boundaries, but intentionally contains no
-business logic. Subscription and payment operations currently return
-`501 Not Implemented`.
+Cancellation, renewal, payment-log queries and asynchronous Kafka publishing remain
+pending. External adapters stay decoupled behind application ports.
 
 ## Stack
 
@@ -35,8 +33,8 @@ business logic. Subscription and payment operations currently return
   with the PostgreSQL schema.
 - **Jest and Supertest:** Support unit and HTTP integration testing.
 - **ESLint and Prettier:** Enforce consistent code quality and formatting.
-- **Swagger UI and OpenAPI:** Document the HTTP contract and make placeholder endpoints
-  discoverable.
+- **Swagger UI and OpenAPI:** Document the HTTP contract and make available endpoints
+  directly testable.
 - **Docker:** Provides a reproducible runtime image and a foundation for deployment.
 
 ## Clean Architecture
@@ -44,7 +42,7 @@ business logic. Subscription and payment operations currently return
 ```text
 src/
 |-- domain/          Enterprise entities and domain errors
-|-- application/     Use-case placeholders, DTOs and ports
+|-- application/     Use cases, DTOs and ports
 |-- infrastructure/  Prisma, configuration, Kafka and Resend adapters
 |-- presentation/    Express controllers, middleware and routes
 |-- app.ts            HTTP application composition
@@ -67,8 +65,8 @@ npm run dev
 
 On PowerShell, use `Copy-Item .env.example .env` instead of `cp`.
 
-The Supabase project is not required for the application scaffold to start. Once it is
-created, replace `DATABASE_URL` and `DIRECT_URL` in `.env`.
+Running the complete API requires a Supabase project and a valid PostgreSQL connection in
+`DATABASE_URL`. Configure the Supabase Auth variables listed in `.env.example` as well.
 
 ## Supabase Database Setup
 
@@ -94,14 +92,19 @@ once in the SQL Editor instead. It:
 - Renames the external subscription reference to `stripe_subscription_id`.
 - Creates a free active subscription for every user without a current subscription.
 
+Then run
+[`supabase/migrations/20260613_replace_plan_ids_with_uuid_v4.sql`](supabase/migrations/20260613_replace_plan_ids_with_uuid_v4.sql).
+It replaces the original plan IDs with valid UUID v4 values, reassigns existing
+subscriptions and updates the trigger that grants the free plan to new users.
+
 The SQL creates the public tables, enums, indexes, profile synchronization trigger,
 read-only RLS policies and these plans:
 
-| Plan            | Price | Currency | Billing period |
-| --------------- | ----: | -------- | -------------- |
-| Gratis          |     0 | MXN      | `NULL`         |
-| Premium mensual |    99 | MXN      | `MONTHLY`      |
-| Premium anual   |   999 | MXN      | `YEARLY`       |
+| Plan            | ID                                     | Price | Currency | Billing period |
+| --------------- | -------------------------------------- | ----: | -------- | -------------- |
+| Gratis          | `f787d141-3c8e-420f-b367-a9edcc84a6df` |     0 | MXN      | `NULL`         |
+| Premium mensual | `99902751-fb7d-4d2f-9716-6eca142b060e` |    99 | MXN      | `MONTHLY`      |
+| Premium anual   | `768a6a3b-60f1-4d23-9d23-f9affc529aa8` |   999 | MXN      | `YEARLY`       |
 
 The Auth seed creates confirmed demo accounts and can be safely run again:
 
@@ -133,11 +136,53 @@ The same JWT is set in an `access_token` cookie with `HttpOnly`, `SameSite=Stric
 `Secure` in production.
 
 The `authenticate` middleware validates `Authorization: Bearer <token>` headers through
-Supabase and stores the verified user in `response.locals.authUser`. Placeholder routes
-do not use this middleware yet.
+Supabase and stores the verified user in `response.locals.authUser`. Checkout and
+subscription query routes require this middleware.
 
 Invalid credentials or invalid JWTs return only status `401` with an empty body. Login
 rate limiting is recorded as technical debt and must be implemented before production.
+
+## Subscription Checkout
+
+Checkout activates a premium plan for the authenticated user:
+
+```http
+POST /api/v1/subscriptions/checkout
+Authorization: Bearer <access_token>
+Idempotency-Key: <unique-key>
+Content-Type: application/json
+
+{
+  "planId": "99902751-fb7d-4d2f-9716-6eca142b060e",
+  "paymentMethod": "simulated-card"
+}
+```
+
+Each logical operation must use a new idempotency key. Retrying the same request must
+reuse that key. Reusing it with a different payload returns `409`.
+
+A successful response returns:
+
+```json
+{
+  "subscriptionId": "subscription-uuid",
+  "status": "ACTIVE",
+  "expiresAt": "2026-07-13T12:01:00.000Z"
+}
+```
+
+The simulated processor accepts any non-empty payment method. Use
+`simulated-declined` to test a declined payment and receive `402`.
+
+Checkout atomically:
+
+- Updates the user's subscription.
+- Enables premium access.
+- Creates the payment log.
+- Creates a `PENDING` notification for the future worker/outbox.
+- Stores the idempotent response.
+
+Relevant responses are `200`, `400`, `401`, `402`, `404`, `409`, `422` and `500`.
 
 ## Subscription Queries
 
@@ -223,8 +268,8 @@ Swagger UI is available at `http://localhost:3000/docs` and health status at
 | GET    | `/api/v1/subscriptions/:userId`  | Admin query by user      |
 | GET    | `/api/v1/payments`               | Get payment logs         |
 
-Checkout, cancellation, renewal, payments, Kafka publishing and Resend delivery remain
-pending features.
+Cancellation, renewal, payment-log queries, Kafka publishing and Resend delivery remain
+pending. Login, checkout and subscription queries are implemented.
 
 ## Prisma and Supabase
 
@@ -234,11 +279,15 @@ for the free plan. Paid plans use the `BillingPeriod` enum with `MONTHLY` and `Y
 Each new Auth user receives an active free subscription, while checkout request
 idempotency is stored separately in `idempotency_keys`.
 
+Checkout uses a Prisma transaction to update `subscriptions` and `user_access`, create
+rows in `payment_logs` and `payment_notifications`, and complete the idempotency record
+without leaving partial writes.
+
 ## Deployment and Scalability Roadmap
 
 The repository includes an initial multi-stage `Dockerfile` and `compose.yaml`. These
 files provide a reproducible application image, but the production deployment strategy
-will be finalized as business logic and external integrations are implemented.
+will be finalized as the remaining operations and external integrations are implemented.
 
 The intended deployment model is:
 
@@ -270,3 +319,7 @@ queue and notification workflows are operational.
 
 Kafka and Resend adapters are present only as commented `implement later` placeholders.
 No clients for those services are installed or initialized.
+
+Checkout already inserts a `PENDING` row into `payment_notifications` in the same
+transaction. The next step is a Transactional Outbox worker that reads those rows,
+publishes the event to Kafka and marks it as `SENT`, or schedules retries after failure.
