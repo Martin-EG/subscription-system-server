@@ -80,18 +80,18 @@ export function createApp({
     }),
   );
   app.use(
-    '/api/v1/payments', 
+    '/api/v1/payments',
     createPaymentRouter({
-      authProvider, 
-      paymentRepository
-    })
+      authProvider,
+      paymentRepository,
+    }),
   );
-    app.use(
-    '/api/v1/plans', 
+  app.use(
+    '/api/v1/plans',
     createPlansRouter({
-      authProvider, 
-      planRepository
-    })
+      authProvider,
+      planRepository,
+    }),
   );
   app.use(errorHandler);
 

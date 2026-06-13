@@ -80,6 +80,7 @@ export class PrismaCheckoutTransaction implements CheckoutTransactionPort {
         subscriptionId: subscription.id,
         status: 'ACTIVE',
         expiresAt: subscription.expiresAt,
+        cancelAtPeriodEnd: false,
       };
 
       await tx.idempotencyKey.update({

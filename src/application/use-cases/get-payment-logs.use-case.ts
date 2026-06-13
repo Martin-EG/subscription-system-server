@@ -8,22 +8,25 @@ interface GetSubscriptionsInput {
   limit: number;
 }
 
-
 export class GetPaymentLogsUseCase {
   constructor(private readonly paymentRepository: PaymentRepository) {}
 
-  async execute({ currentUser, page, limit }: GetSubscriptionsInput): Promise<PaginatedPaymentsOutput> {
-    if(currentUser.role !== 'ADMIN') {
+  async execute({
+    currentUser,
+    page,
+    limit,
+  }: GetSubscriptionsInput): Promise<PaginatedPaymentsOutput> {
+    if (currentUser.role !== 'ADMIN') {
       throw new ForbiddenError();
     }
-    
+
     const { items, total } = await this.paymentRepository.findAll({ page, limit });
 
     return {
       data: items,
       total,
       page,
-      limit
-    }
+      limit,
+    };
   }
 }

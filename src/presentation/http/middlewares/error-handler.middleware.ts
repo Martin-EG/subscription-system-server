@@ -31,8 +31,12 @@ export const errorHandler: ErrorRequestHandler = (error, _request, response, _ne
     response.status(404).end();
     return;
   }
- 
-  if (error instanceof ConflictError) {
+
+  if (
+    error instanceof ConflictError ||
+    error instanceof IdempotencyConflictError ||
+    error instanceof IdempotencyInProgressError
+  ) {
     response.status(409).json({
       type: 'about:blank',
       title: 'Conflict',
@@ -41,7 +45,7 @@ export const errorHandler: ErrorRequestHandler = (error, _request, response, _ne
     });
     return;
   }
-  
+
   if (error instanceof InvalidPlanForCheckoutError) {
     response.status(422).end();
     return;

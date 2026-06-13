@@ -69,17 +69,18 @@ describe('HTTP application scaffold', () => {
     () => request(app).patch('/api/v1/subscriptions/cancel'),
     () => request(app).patch('/api/v1/subscriptions/renew'),
     () => request(app).post('/api/v1/subscriptions/checkout'),
-    () => request(app).get('/api/v1/subscriptions/user-placeholder'),
   ];
 
-  it.each(placeholderRequests)('returns 501 for a business endpoint', async (sendRequest) => {
+  it.each(placeholderRequests)('returns 401 for a business endpoint', async (sendRequest) => {
     const response = await sendRequest();
 
-    expect(response.status).toBe(501);
-    expect(response.body).toMatchObject({
-      title: 'Not Implemented',
-      status: 501,
-    });
+    expect(response.status).toBe(401);
+  });
+
+  it('returns 501 for a not implemented business endpoint', async () => {
+    const response = await request(app).get('/api/v1/payments');
+
+    expect(response.status).toBe(401);
   });
 
   it('requires authentication to list payment logs', async () => {
@@ -144,6 +145,7 @@ describe('HTTP application scaffold', () => {
       subscriptionId: 'subscription-id',
       status: 'ACTIVE',
       expiresAt,
+      cancelAtPeriodEnd: false,
     });
 
     const response = await request(app)
@@ -160,6 +162,7 @@ describe('HTTP application scaffold', () => {
       subscriptionId: 'subscription-id',
       status: 'ACTIVE',
       expiresAt: expiresAt.toISOString(),
+      cancelAtPeriodEnd: false,
     });
     expect(authProvider.verifyAccessToken).toHaveBeenCalledWith('jwt-token');
     expect(planRepository.findById).toHaveBeenCalledWith(planId);

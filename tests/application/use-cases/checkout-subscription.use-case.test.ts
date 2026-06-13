@@ -173,6 +173,7 @@ describe('CheckoutSubscriptionUseCase', () => {
       subscriptionId: 'subscription-id',
       status: 'ACTIVE',
       expiresAt: expectedExpiresAt,
+      cancelAtPeriodEnd: false,
     });
     expect(planRepository.findById).not.toHaveBeenCalled();
     expect(paymentProcessor.process).not.toHaveBeenCalled();

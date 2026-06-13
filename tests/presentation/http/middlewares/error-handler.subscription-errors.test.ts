@@ -54,14 +54,24 @@ describe('subscription error handling', () => {
     const response = await request(createApp(new IdempotencyConflictError())).get('/failure');
 
     expect(response.status).toBe(409);
-    expect(response.text).toBe('');
+    expect(response.body).toEqual({
+      type: 'about:blank',
+      title: 'Conflict',
+      status: 409,
+      detail: 'IdempotencyConflict',
+    });
   });
 
   it('returns an empty 409 response for idempotency in progress', async () => {
     const response = await request(createApp(new IdempotencyInProgressError())).get('/failure');
 
     expect(response.status).toBe(409);
-    expect(response.text).toBe('');
+    expect(response.body).toEqual({
+      type: 'about:blank',
+      title: 'Conflict',
+      status: 409,
+      detail: 'IdempotencyInProgress',
+    });
   });
 
   it('returns an empty 422 response for invalid plan for checkout', async () => {
@@ -70,7 +80,7 @@ describe('subscription error handling', () => {
     expect(response.status).toBe(422);
     expect(response.text).toBe('');
   });
-  
+
   it('returns problem details for subscription conflicts', async () => {
     const response = await request(createApp(new ConflictError('Not renewable'))).get('/failure');
 

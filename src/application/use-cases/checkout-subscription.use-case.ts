@@ -126,6 +126,7 @@ export class CheckoutSubscriptionUseCase {
       subscriptionId: replay.subscriptionId,
       status: replay.status,
       expiresAt: replay.expiresAt === null ? null : new Date(replay.expiresAt),
+      cancelAtPeriodEnd: false,
     };
   }
 }

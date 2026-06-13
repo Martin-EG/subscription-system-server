@@ -10,18 +10,13 @@ export interface PaymentRouterOptions {
 }
 
 export function createPaymentRouter({
-    authProvider,
-    paymentRepository
+  authProvider,
+  paymentRepository,
 }: PaymentRouterOptions): Router {
-    const router = Router();
-    const getPaymentLogsUseCase = new GetPaymentLogsUseCase(paymentRepository);
+  const router = Router();
+  const getPaymentLogsUseCase = new GetPaymentLogsUseCase(paymentRepository);
 
-    router.get(
-        '/',
-        authenticate(authProvider),
-        createPaymentLogsController(getPaymentLogsUseCase)
-    );
+  router.get('/', authenticate(authProvider), createPaymentLogsController(getPaymentLogsUseCase));
 
-    return router;
+  return router;
 }
-

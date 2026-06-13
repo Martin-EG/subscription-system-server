@@ -13,4 +13,5 @@ export interface CompleteCheckoutResult {
   subscriptionId: string;
   status: 'ACTIVE';
   expiresAt: Date | null;
+  cancelAtPeriodEnd: boolean;
 }

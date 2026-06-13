@@ -54,6 +54,7 @@ describe('PrismaCheckoutTransaction', () => {
       subscriptionId: 'subscription-id',
       status: 'ACTIVE',
       expiresAt,
+      cancelAtPeriodEnd: false,
     });
     expect(transaction).toHaveBeenCalledTimes(1);
     expect(tx.subscription.upsert).toHaveBeenCalledWith({

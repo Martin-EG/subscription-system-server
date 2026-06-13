@@ -54,7 +54,7 @@ export function createSubscriptionsController(
           title: 'Bad Request',
           status: 400,
         });
-        
+
         return;
       }
 

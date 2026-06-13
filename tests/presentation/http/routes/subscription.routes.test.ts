@@ -254,7 +254,7 @@ describe('createSubscriptionRouter', () => {
       }),
     );
   });
-  
+
   it('schedules cancellation for the authenticated user', async () => {
     const { app, scheduleCancellation } = createApp();
 

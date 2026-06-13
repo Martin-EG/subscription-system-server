@@ -28,16 +28,16 @@ export class PrismaPaymentRepository implements PaymentRepository {
         skip: (page - 1) * limit,
         take: limit,
       }),
-      this.prisma.paymentLog.count()
+      this.prisma.paymentLog.count(),
     ]);
-    
+
     return {
       items: items.map((paymentLog) => ({
         ...paymentLog,
         amount: paymentLog.amount.toNumber(),
       })),
-      total
-    }
+      total,
+    };
   }
 
   async save(payment: PaymentLog): Promise<void> {

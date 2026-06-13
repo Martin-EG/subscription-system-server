@@ -38,6 +38,9 @@ describe('PrismaSubscriptionRepository', () => {
     expect(findFirst).toHaveBeenCalledWith({
       where: {
         userId: 'user-id',
+        status: {
+          in: ['ACTIVE', 'PAST_DUE'],
+        },
       },
       include: {
         user: true,
@@ -67,6 +70,11 @@ describe('PrismaSubscriptionRepository', () => {
       items: [{ subscriptionId: 'subscription-id' }],
     });
     expect(findMany).toHaveBeenCalledWith({
+      where: {
+        status: {
+          in: ['ACTIVE', 'PAST_DUE'],
+        },
+      },
       include: {
         user: true,
         plan: true,
@@ -77,7 +85,13 @@ describe('PrismaSubscriptionRepository', () => {
         createdAt: 'desc',
       },
     });
-    expect(count).toHaveBeenCalledWith();
+    expect(count).toHaveBeenCalledWith({
+      where: {
+        status: {
+          in: ['ACTIVE', 'PAST_DUE'],
+        },
+      },
+    });
   });
 
   it('returns null when the user has no current subscription', async () => {

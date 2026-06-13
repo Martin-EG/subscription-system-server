@@ -9,19 +9,11 @@ export interface PlanRouterOptions {
   planRepository: PlanRepository;
 }
 
-export function createPlansRouter({
-    authProvider,
-    planRepository
-}: PlanRouterOptions): Router {
-    const router = Router();
-    const getPlanLogsUseCase = new GetPlansUseCase(planRepository);
+export function createPlansRouter({ authProvider, planRepository }: PlanRouterOptions): Router {
+  const router = Router();
+  const getPlanLogsUseCase = new GetPlansUseCase(planRepository);
 
-    router.get(
-        '/',
-        authenticate(authProvider),
-        createPlanController(getPlanLogsUseCase)
-    );
+  router.get('/', authenticate(authProvider), createPlanController(getPlanLogsUseCase));
 
-    return router;
+  return router;
 }
-

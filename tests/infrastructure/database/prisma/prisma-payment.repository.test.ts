@@ -55,11 +55,13 @@ describe('PrismaPaymentRepository', () => {
     const input = { page: 1, limit: 20 };
 
     await expect(repository.findAll(input)).resolves.toEqual({
-      items: [{
-        ...persistedPayment,
-        amount: 99,
-      }],
-      total: 1
+      items: [
+        {
+          ...persistedPayment,
+          amount: 99,
+        },
+      ],
+      total: 1,
     });
     expect(findMany).toHaveBeenCalledWith({
       skip: (input.page - 1) * input.limit,
