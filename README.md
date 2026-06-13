@@ -4,9 +4,17 @@
 
 Sistema de Suscripciones es la base de backend para una empresa que lanzará un servicio de suscripciones premium. Su objetivo es soportar un servicio y un portal donde los usuarios puedan suscribirse a un plan, gestionar renovaciones y cancelaciones, consultar su suscripción actual y obtener o perder acceso a funcionalidades premium según sus permisos.
 
-Actualmente, el sistema permite autenticarse con Supabase, consultar suscripciones y activar un plan premium mediante un checkout con pago simulado. El checkout es idempotente y actualiza la suscripción, el acceso premium, el registro de pago y la notificación pendiente dentro de una transacción PostgreSQL. Un worker de Transactional Outbox publica posteriormente la notificación externa simulada mediante consola.
+Actualmente, el sistema permite autenticarse con Supabase, consultar planes y pagos,
+activar o renovar un plan premium, programar su cancelación y consultar suscripciones.
+Los administradores pueden listar suscripciones y buscar la suscripción de un usuario
+específico. Checkout y renovación son idempotentes y actualizan la suscripción, el acceso
+premium, el registro de pago y la notificación pendiente dentro de una transacción
+PostgreSQL.
 
-La cancelación, renovación y consulta de pagos permanecen pendientes. La integración externa se simula mediante consola, como permite el ejercicio, y continúa desacoplada mediante un puerto de aplicación para poder reemplazarla por Kafka o un webhook.
+Workers independientes publican las notificaciones externas simuladas y retiran el acceso
+de las suscripciones vencidas. La integración externa se simula mediante consola, como
+permite el ejercicio, y continúa desacoplada mediante un puerto de aplicación para poder
+reemplazarla por Kafka o un webhook.
 
 ## Stack Tecnológico
 
@@ -38,6 +46,14 @@ src/
 Las dependencias apuntan hacia el interior: presentación e infraestructura dependen de
 los contratos de aplicación y dominio. La capa de dominio no importa Express, Prisma ni
 servicios externos.
+
+### Diseño inicial del sistema
+
+Como referencia informativa, el diseño inicial utilizado durante la planeación está
+disponible en
+[Excalidraw](https://excalidraw.com/#json=3Uj6tuSIZeOs3OQXmOfwU,QVREd08aL3cz56ch40K-Og).
+El código y la documentación de este repositorio representan el comportamiento vigente
+cuando exista alguna diferencia con ese bosquejo.
 
 ## Configuración Local
 
@@ -248,11 +264,24 @@ La respuesta administrativa contiene `data`, `page`, `limit` y `total`.
 
 ```http
 GET /api/v1/subscriptions/{userId}
+Authorization: Bearer <admin_access_token>
 ```
 
-Este endpoint es exclusivo para `ADMIN`. Un usuario regular recibe `403 Forbidden`. Las
-consultas sin token o con un JWT inválido reciben `401 Unauthorized`; una suscripción
-actual inexistente recibe `404 Not Found`.
+Esta prioridad está completada. El endpoint:
+
+- Es exclusivo para usuarios con rol `ADMIN`.
+- Valida que `userId` sea un UUID; un valor inválido responde `400 Bad Request`.
+- Devuelve la suscripción del usuario con el mismo formato de la respuesta individual.
+- Responde `401 Unauthorized` sin un JWT válido.
+- Responde `403 Forbidden` para un usuario regular.
+- Responde `404 Not Found` cuando el usuario no tiene una suscripción.
+
+Ejemplo:
+
+```http
+GET /api/v1/subscriptions/550e8400-e29b-41d4-a716-446655440000
+Authorization: Bearer <admin_access_token>
+```
 
 ## Comandos
 
@@ -282,7 +311,13 @@ Swagger UI está disponible en `http://localhost:3000/docs` y el estado de salud
 | GET    | `/api/v1/subscriptions/:userId`  | Consulta administrativa por usuario |
 | GET    | `/api/v1/payments`               | Consultar registros de pagos        |
 
-La cancelación se programa al final del periodo y conserva el acceso premium hasta `expiresAt`. La renovación reutiliza el plan actual para suscripciones `CANCELLED`, `PAST_DUE`, `EXPIRED` o con cancelación programada, y requiere `paymentMethod` e `idempotencyKey`. Las renovaciones que abren un nuevo periodo procesan el pago simulado y guardan la suscripción, el acceso, el registro de pago, el evento de notificación y la respuesta idempotente en una transacción. La publicación externa se simula mediante `ConsoleEventPublisher`.
+La cancelación se programa al final del periodo y conserva el acceso premium hasta
+`expiresAt`. La renovación reutiliza el plan actual para suscripciones `CANCELLED`,
+`PAST_DUE`, `EXPIRED` o con cancelación programada, y requiere `paymentMethod` e
+`idempotencyKey`. Las renovaciones que abren un nuevo periodo procesan el pago simulado y
+guardan la suscripción, el acceso, el registro de pago, el evento de notificación y la
+respuesta idempotente en una transacción. La publicación externa se simula mediante
+`ConsoleEventPublisher`.
 
 ## Prisma y Supabase
 

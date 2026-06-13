@@ -8,15 +8,16 @@ users can subscribe to a plan, manage renewals and cancellations, review their c
 subscription, and obtain or lose access to premium features according to their
 entitlements.
 
-The system currently supports Supabase authentication, subscription queries and premium
-plan activation through a simulated-payment checkout. Checkout is idempotent and updates
-the subscription, premium access, payment log and pending notification in one PostgreSQL
-transaction. A Transactional Outbox worker later publishes the simulated external
-notification to the console.
+The system currently supports Supabase authentication, plan and payment-log queries,
+premium checkout and renewal, scheduled cancellation, and subscription queries.
+Administrators can list subscriptions and retrieve the subscription for a specific user.
+Checkout and renewal are idempotent and update the subscription, premium access, payment
+log, and pending notification in one PostgreSQL transaction.
 
-Cancellation, renewal and payment-log queries remain pending. The external integration
-is simulated through the console, as allowed by the exercise, and stays decoupled behind
-an application port so it can later be replaced by Kafka or a webhook.
+Independent workers publish simulated external notifications and revoke access from
+expired subscriptions. The external integration uses the console, as allowed by the
+exercise, and stays decoupled behind an application port so it can later be replaced by
+Kafka or a webhook.
 
 ## Stack
 
@@ -53,6 +54,13 @@ src/
 
 Dependencies point inward: presentation and infrastructure depend on application and
 domain contracts. The domain layer does not import Express, Prisma or external services.
+
+### Initial system design
+
+For informational purposes, the initial design used during planning is available in
+[Excalidraw](https://excalidraw.com/#json=3Uj6tuSIZeOs3OQXmOfwU,QVREd08aL3cz56ch40K-Og).
+The code and documentation in this repository describe the current behavior whenever
+they differ from that early sketch.
 
 ## Setup
 
@@ -265,11 +273,24 @@ The administrative response contains `data`, `page`, `limit` and `total`.
 
 ```http
 GET /api/v1/subscriptions/{userId}
+Authorization: Bearer <admin_access_token>
 ```
 
-This endpoint is restricted to `ADMIN`. A regular user receives `403 Forbidden`.
-Requests without a token or with an invalid JWT receive `401 Unauthorized`; a missing
-current subscription receives `404 Not Found`.
+This priority is complete. The endpoint:
+
+- Is restricted to users with the `ADMIN` role.
+- Validates that `userId` is a UUID; invalid values return `400 Bad Request`.
+- Returns the user's subscription using the individual response format shown above.
+- Returns `401 Unauthorized` without a valid JWT.
+- Returns `403 Forbidden` for a regular user.
+- Returns `404 Not Found` when the user has no subscription.
+
+Example:
+
+```http
+GET /api/v1/subscriptions/550e8400-e29b-41d4-a716-446655440000
+Authorization: Bearer <admin_access_token>
+```
 
 ## Commands
 
@@ -301,9 +322,10 @@ Swagger UI is available at `http://localhost:3000/docs` and health status at
 
 Cancellation is scheduled at period end and premium access remains available until
 `expiresAt`. Renewal reuses the current plan for scheduled cancellations, `CANCELLED`,
-or `PAST_DUE` subscriptions and requires `paymentMethod` and `idempotencyKey`.
-Checkout, external payment-provider integration, Kafka publishing, and Resend delivery
-remain pending features.
+`PAST_DUE`, or `EXPIRED` subscriptions and requires `paymentMethod` and
+`idempotencyKey`. Renewals that open a new period process the simulated payment and store
+the subscription, access, payment log, notification event, and idempotent response in one
+transaction. External publication is simulated through `ConsoleEventPublisher`.
 
 ## Prisma and Supabase
 
