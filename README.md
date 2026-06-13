@@ -4,9 +4,9 @@
 
 Sistema de Suscripciones es la base de backend para una empresa que lanzará un servicio de suscripciones premium. Su objetivo es soportar un servicio y un portal donde los usuarios puedan suscribirse a un plan, gestionar renovaciones y cancelaciones, consultar su suscripción actual y obtener o perder acceso a funcionalidades premium según sus permisos.
 
-El sistema está diseñado para coordinar en el futuro el procesamiento de pagos, el ciclo de vida de las suscripciones, el acceso premium, la auditoría de pagos y las notificaciones asíncronas. Los administradores también podrán consultar la información de suscripciones y pagos de todos los usuarios.
+Actualmente, el sistema permite autenticarse con Supabase, consultar suscripciones y activar un plan premium mediante un checkout con pago simulado. El checkout es idempotente y actualiza la suscripción, el acceso premium, el registro de pago y la notificación pendiente dentro de una transacción PostgreSQL.
 
-Actualmente, este repositorio es una base arquitectónica. Define los contratos de la API, los modelos de dominio, la configuración de la base de datos y los límites de las integraciones, pero intencionalmente no contiene lógica de negocio. Las operaciones de suscripciones y pagos responden por ahora con `501 Not Implemented`.
+La cancelación, renovación, consulta de pagos y publicación asíncrona mediante Kafka permanecen pendientes. Los adaptadores externos continúan desacoplados mediante puertos de aplicación.
 
 ## Stack Tecnológico
 
@@ -19,7 +19,7 @@ Actualmente, este repositorio es una base arquitectónica. Define los contratos 
 - **Prisma 7:** proporciona un cliente de base de datos tipado y mantiene el modelo de la aplicación alineado con el esquema de PostgreSQL.
 - **Jest y Supertest:** permiten crear pruebas unitarias y de integración HTTP.
 - **ESLint y Prettier:** mantienen la calidad y el formato consistente del código.
-- **Swagger UI y OpenAPI:** documentan el contrato HTTP y permiten explorar los endpoints placeholder.
+- **Swagger UI y OpenAPI:** documentan el contrato HTTP y permiten probar los endpoints disponibles.
 - **Docker:** proporciona una imagen de ejecución reproducible y una base para el
   despliegue.
 
@@ -28,7 +28,7 @@ Actualmente, este repositorio es una base arquitectónica. Define los contratos 
 ```text
 src/
 |-- domain/          Entidades y errores de dominio
-|-- application/     Casos de uso placeholder, DTOs y puertos
+|-- application/     Casos de uso, DTOs y puertos
 |-- infrastructure/  Prisma, configuración y adaptadores de Kafka y Resend
 |-- presentation/    Controladores, middleware y rutas de Express
 |-- app.ts            Composición de la aplicación HTTP
@@ -52,7 +52,7 @@ npm run dev
 
 En PowerShell, utiliza `Copy-Item .env.example .env` en lugar de `cp`.
 
-El proyecto de Supabase no es necesario para iniciar el scaffold de la aplicación. Una vez creado, reemplaza `DATABASE_URL` y `DIRECT_URL` en `.env`.
+Para ejecutar la API completa se requiere un proyecto de Supabase y una conexión PostgreSQL válida en `DATABASE_URL`. Configura también las variables de Supabase Auth indicadas en `.env.example`.
 
 ## Configuración de Supabase
 
@@ -76,13 +76,18 @@ Para una base de datos creada previamente con la primera versión del esquema, e
 - Renombra la referencia externa de suscripción a `stripe_subscription_id`.
 - Crea una suscripción gratuita activa para cada usuario sin suscripción vigente.
 
+Después ejecuta:
+[`supabase/migrations/20260613_replace_plan_ids_with_uuid_v4.sql`](supabase/migrations/20260613_replace_plan_ids_with_uuid_v4.sql)
+
+Esta migración reemplaza los IDs iniciales de los planes por UUID v4 válidos, reasigna las suscripciones existentes y actualiza el trigger que entrega el plan gratuito a usuarios nuevos.
+
 El SQL crea las tablas públicas, enums, índices, el trigger de sincronización de perfiles, las políticas RLS de lectura y los siguientes planes:
 
-| Plan            | Precio | Moneda | Periodo de cobro |
-| --------------- | -----: | ------ | ---------------- |
-| Gratis          |      0 | MXN    | `NULL`           |
-| Premium mensual |     99 | MXN    | `MONTHLY`        |
-| Premium anual   |    999 | MXN    | `YEARLY`         |
+| Plan            | ID                                     | Precio | Moneda | Periodo de cobro |
+| --------------- | -------------------------------------- | -----: | ------ | ---------------- |
+| Gratis          | `f787d141-3c8e-420f-b367-a9edcc84a6df` |      0 | MXN    | `NULL`           |
+| Premium mensual | `99902751-fb7d-4d2f-9716-6eca142b060e` |     99 | MXN    | `MONTHLY`        |
+| Premium anual   | `768a6a3b-60f1-4d23-9d23-f9affc529aa8` |    999 | MXN    | `YEARLY`         |
 
 El seed de Auth crea cuentas de demostración confirmadas y puede ejecutarse nuevamente de forma segura:
 
@@ -113,12 +118,54 @@ El mismo JWT se establece en una cookie `access_token` con `HttpOnly`,
 `SameSite=Strict` y `Secure` en producción.
 
 El middleware `authenticate` valida encabezados `Authorization: Bearer <token>` mediante
-Supabase y guarda el usuario verificado en `response.locals.authUser`. Las rutas
-placeholder todavía no utilizan este middleware.
+Supabase y guarda el usuario verificado en `response.locals.authUser`. Checkout y las
+consultas de suscripciones requieren este middleware.
 
 Las credenciales inválidas o los JWT no válidos responden únicamente con estado `401` y
 sin cuerpo. El rate limiting del login queda registrado como deuda técnica y deberá
 implementarse antes de producción.
+
+## Checkout de Suscripción
+
+El checkout activa un plan premium para el usuario autenticado:
+
+```http
+POST /api/v1/subscriptions/checkout
+Authorization: Bearer <access_token>
+Idempotency-Key: <unique-key>
+Content-Type: application/json
+
+{
+  "planId": "99902751-fb7d-4d2f-9716-6eca142b060e",
+  "paymentMethod": "simulated-card"
+}
+```
+
+Cada operación lógica debe usar una clave de idempotencia nueva. Si la misma solicitud se
+reintenta, debe reutilizar la misma clave. Reutilizarla con otro payload responde `409`.
+
+Una respuesta exitosa devuelve:
+
+```json
+{
+  "subscriptionId": "subscription-uuid",
+  "status": "ACTIVE",
+  "expiresAt": "2026-07-13T12:01:00.000Z"
+}
+```
+
+El procesador simulado acepta cualquier método no vacío. El valor
+`simulated-declined` permite probar un pago rechazado y responde `402`.
+
+El checkout realiza atómicamente:
+
+- Actualización de la suscripción del usuario.
+- Habilitación de acceso premium.
+- Creación del registro de pago.
+- Creación de una notificación `PENDING` para el futuro worker/outbox.
+- Persistencia de la respuesta idempotente.
+
+Respuestas relevantes: `200`, `400`, `401`, `402`, `404`, `409`, `422` y `500`.
 
 ## Consulta de Suscripciones
 
@@ -204,16 +251,19 @@ Swagger UI está disponible en `http://localhost:3000/docs` y el estado de salud
 | GET    | `/api/v1/subscriptions/:userId`  | Consulta administrativa por usuario |
 | GET    | `/api/v1/payments`               | Consultar registros de pagos        |
 
-Checkout, cancelación, renovación, pagos, publicación en Kafka y envío mediante Resend
-continúan como funcionalidades pendientes.
+Cancelación, renovación, consulta de pagos, publicación en Kafka y envío mediante Resend
+continúan como funcionalidades pendientes. Login, checkout y consulta de suscripciones
+ya están implementados.
 
 ## Prisma y Supabase
 
-El esquema de Prisma refleja las tablas creadas por `supabase/setup.sql`. La columna `users.id` referencia al usuario correspondiente de Supabase Auth y `billing_period` permite `NULL` para el plan gratuito. Los planes de pago utilizan el enum `BillingPeriod` con `MONTHLY` y `YEARLY`. Cada nuevo usuario de Auth recibe una suscripción gratuita activa, mientras que la idempotencia del checkout se almacena por separado en `idempotency_keys`.
+El esquema de Prisma refleja las tablas creadas por `supabase/setup.sql`. La columna `users.id` referencia al usuario correspondiente de Supabase Auth y `billing_period` permite `NULL` para el plan gratuito. Los planes de pago utilizan el enum `BillingPeriod` con `MONTHLY` y `YEARLY`. Cada nuevo usuario de Auth recibe una suscripción gratuita activa.
+
+La idempotencia se almacena en `idempotency_keys`. El checkout utiliza una transacción Prisma para actualizar `subscriptions` y `user_access`, crear filas en `payment_logs` y `payment_notifications`, y completar la operación idempotente sin dejar escrituras parciales.
 
 ## Hoja de Ruta de Despliegue y Escalabilidad
 
-El repositorio incluye un `Dockerfile` multietapa inicial y `compose.yaml`. Estos archivos proporcionan una imagen reproducible, pero la estrategia de producción se terminará de definir conforme se implementen la lógica de negocio y las integraciones externas.
+El repositorio incluye un `Dockerfile` multietapa inicial y `compose.yaml`. Estos archivos proporcionan una imagen reproducible, pero la estrategia de producción se terminará de definir conforme se implementen las operaciones restantes y las integraciones externas.
 
 El modelo de despliegue previsto es:
 
@@ -241,3 +291,5 @@ Esta sección es una dirección arquitectónica provisional. Las políticas conc
 ## Integraciones Pendientes
 
 Los adaptadores de Kafka y Resend existen únicamente como placeholders comentados con `implement later`. Sus clientes todavía no están instalados ni inicializados.
+
+El checkout ya crea una fila `payment_notifications` con estado `PENDING` dentro de la misma transacción. El siguiente paso será implementar un worker de Transactional Outbox que lea esas filas, publique el evento en Kafka y actualice su estado a `SENT` o programe reintentos en caso de error.

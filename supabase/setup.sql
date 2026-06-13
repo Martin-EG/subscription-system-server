@@ -241,7 +241,7 @@ begin
   )
   select
     new.id,
-    '00000000-0000-0000-0000-000000000001',
+    'f787d141-3c8e-420f-b367-a9edcc84a6df',
     'ACTIVE'::public."SubscriptionStatus",
     now(),
     null,
@@ -251,7 +251,7 @@ begin
   where exists (
     select 1
     from public.plans
-    where plans.id = '00000000-0000-0000-0000-000000000001'
+    where plans.id = 'f787d141-3c8e-420f-b367-a9edcc84a6df'
   )
   and not exists (
     select 1
@@ -273,16 +273,16 @@ create trigger on_auth_user_created
 
 insert into public.plans (id, name, price, currency, billing_period)
 values
-  ('00000000-0000-0000-0000-000000000001', 'Gratis', 0, 'MXN', null),
+  ('f787d141-3c8e-420f-b367-a9edcc84a6df', 'Gratis', 0, 'MXN', null),
   (
-    '00000000-0000-0000-0000-000000000002',
+    '99902751-fb7d-4d2f-9716-6eca142b060e',
     'Premium mensual',
     99,
     'MXN',
     'MONTHLY'
   ),
   (
-    '00000000-0000-0000-0000-000000000003',
+    '768a6a3b-60f1-4d23-9d23-f9affc529aa8',
     'Premium anual',
     999,
     'MXN',
@@ -307,7 +307,7 @@ insert into public.subscriptions (
 )
 select
   users.id,
-  '00000000-0000-0000-0000-000000000001',
+  'f787d141-3c8e-420f-b367-a9edcc84a6df',
   'ACTIVE'::public."SubscriptionStatus",
   now(),
   null,
