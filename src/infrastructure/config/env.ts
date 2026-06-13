@@ -9,6 +9,10 @@ const envSchema = z.object({
   DIRECT_URL: z.string().min(1).optional(),
   SUPABASE_URL: z.url().optional(),
   SUPABASE_ANON_KEY: z.string().min(1).optional(),
+  OUTBOX_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(1000),
+  OUTBOX_BATCH_SIZE: z.coerce.number().int().positive().max(1000).default(100),
+  OUTBOX_MAX_RETRIES: z.coerce.number().int().positive().default(5),
+  PAYMENT_NOTIFICATION_TOPIC: z.string().min(1).default('payment-succeeded'),
 });
 
 export const env = envSchema.parse(process.env);

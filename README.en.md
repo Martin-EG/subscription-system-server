@@ -11,10 +11,12 @@ entitlements.
 The system currently supports Supabase authentication, subscription queries and premium
 plan activation through a simulated-payment checkout. Checkout is idempotent and updates
 the subscription, premium access, payment log and pending notification in one PostgreSQL
-transaction.
+transaction. A Transactional Outbox worker later publishes the simulated external
+notification to the console.
 
-Cancellation, renewal, payment-log queries and asynchronous Kafka publishing remain
-pending. External adapters stay decoupled behind application ports.
+Cancellation, renewal and payment-log queries remain pending. The external integration
+is simulated through the console, as allowed by the exercise, and stays decoupled behind
+an application port so it can later be replaced by Kafka or a webhook.
 
 ## Stack
 
@@ -43,7 +45,7 @@ pending. External adapters stay decoupled behind application ports.
 src/
 |-- domain/          Enterprise entities and domain errors
 |-- application/     Use cases, DTOs and ports
-|-- infrastructure/  Prisma, configuration, Kafka and Resend adapters
+|-- infrastructure/  Prisma, configuration, worker and external adapters
 |-- presentation/    Express controllers, middleware and routes
 |-- app.ts            HTTP application composition
 `-- main.ts           Process entry point
@@ -179,8 +181,13 @@ Checkout atomically:
 - Updates the user's subscription.
 - Enables premium access.
 - Creates the payment log.
-- Creates a `PENDING` notification for the future worker/outbox.
+- Creates a `PENDING` notification for the worker/outbox.
 - Stores the idempotent response.
+
+The worker claims notifications in batches with `FOR UPDATE SKIP LOCKED`, changes their
+status to `PROCESSING`, and publishes a structured event through
+`ConsoleEventPublisher`. Successful publications are marked `SENT`; failures use
+exponential backoff and return to `PENDING`, or become `FAILED` after the retry limit.
 
 Relevant responses are `200`, `400`, `401`, `402`, `404`, `409`, `422` and `500`.
 
@@ -268,8 +275,8 @@ Swagger UI is available at `http://localhost:3000/docs` and health status at
 | GET    | `/api/v1/subscriptions/:userId`  | Admin query by user      |
 | GET    | `/api/v1/payments`               | Get payment logs         |
 
-Cancellation, renewal, payment-log queries, Kafka publishing and Resend delivery remain
-pending. Login, checkout and subscription queries are implemented.
+Cancellation, renewal and payment-log queries remain pending. Login, checkout,
+subscription queries and simulated external notifications are implemented.
 
 ## Prisma and Supabase
 
@@ -312,14 +319,17 @@ The future CI/CD pipeline should:
 7. Run smoke and migration checks before a controlled production deployment.
 
 This section is a placeholder architecture direction. Concrete hosting, orchestration,
-rollback, database migration and release policies will be updated once the payment,
-queue and notification workflows are operational.
+rollback, database migration and release policies will be updated when the simulated
+integration is replaced with production infrastructure.
 
-## Deferred Integrations
+## Simulated External Integration
 
-Kafka and Resend adapters are present only as commented `implement later` placeholders.
-No clients for those services are installed or initialized.
+The exercise allows the external service to be simulated with a webhook URL or console.
+This implementation uses `ConsoleEventPublisher`: checkout inserts a
+`payment_notifications` row in the same transaction, and the worker processes it outside
+the synchronous request path.
 
-Checkout already inserts a `PENDING` row into `payment_notifications` in the same
-transaction. The next step is a Transactional Outbox worker that reads those rows,
-publishes the event to Kafka and marks it as `SENT`, or schedules retries after failure.
+`OUTBOX_POLL_INTERVAL_MS`, `OUTBOX_BATCH_SIZE`, `OUTBOX_MAX_RETRIES`, and
+`PAYMENT_NOTIFICATION_TOPIC` configure the worker. Kafka and Resend remain production
+alternatives; replacing the console adapter does not require changing checkout or the
+application use case.

@@ -3,6 +3,7 @@ export * from './checkout-transaction.port';
 export * from './event-publisher.port';
 export * from './idempotency-repository.port';
 export * from './notification-sender.port';
+export * from './payment-notification-repository.port';
 export * from './payment-processor.port';
 export * from './payment-repository.port';
 export * from './plan-repository.port';

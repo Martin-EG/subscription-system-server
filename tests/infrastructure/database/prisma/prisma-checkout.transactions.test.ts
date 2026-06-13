@@ -93,7 +93,15 @@ describe('PrismaCheckoutTransaction', () => {
     expect(tx.paymentNotification.create).toHaveBeenCalledWith({
       data: {
         subscriptionId: 'subscription-id',
-        status: 'PENDING',
+        eventType: 'PAYMENT_SUCCEEDED',
+        payload: {
+          amount: 99,
+          currency: 'MXN',
+          occurredAt: '2026-06-13T12:00:00.000Z',
+          subscriptionId: 'subscription-id',
+          transactionId: 'transaction-id',
+          userId: 'user-id',
+        },
       },
     });
     expect(tx.userAccess.upsert).toHaveBeenCalledWith({

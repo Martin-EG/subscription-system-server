@@ -1,11 +1,7 @@
 import type { CompleteCheckoutInput, CompleteCheckoutResult } from '../../../application/dtos';
 import type { CheckoutTransactionPort } from '../../../application/ports';
 import type { PrismaClient } from '../../../generated/prisma/client';
-import {
-  IdempotencyStatus,
-  PaymentNotificationStatus,
-  SubscriptionStatus,
-} from '../../../generated/prisma/enums';
+import { IdempotencyStatus, SubscriptionStatus } from '../../../generated/prisma/enums';
 
 export class PrismaCheckoutTransaction implements CheckoutTransactionPort {
   constructor(private readonly prisma: PrismaClient) {}
@@ -51,7 +47,15 @@ export class PrismaCheckoutTransaction implements CheckoutTransactionPort {
       await tx.paymentNotification.create({
         data: {
           subscriptionId: subscription.id,
-          status: PaymentNotificationStatus.PENDING,
+          eventType: 'PAYMENT_SUCCEEDED',
+          payload: {
+            userId: input.userId,
+            subscriptionId: subscription.id,
+            transactionId: input.transactionId,
+            amount: input.amount,
+            currency: input.currency,
+            occurredAt: input.startedAt.toISOString(),
+          },
         },
       });
 
