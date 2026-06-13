@@ -1,4 +1,4 @@
-import { CompleteCheckoutInput, CompleteCheckoutResult } from "../dtos";
+import type { CompleteCheckoutInput, CompleteCheckoutResult } from "../dtos";
 
 
 export interface CheckoutTransactionPort {
