@@ -18,8 +18,9 @@ $$;
 do $$
 begin
   create type public."PaymentNotificationStatus" as enum (
-    'SENT',
     'PENDING',
+    'PROCESSING',
+    'SENT',
     'FAILED'
   );
 exception
@@ -193,14 +194,18 @@ create index if not exists payment_logs_subscription_id_idx
 create table if not exists public.payment_notifications (
   id uuid primary key default gen_random_uuid(),
   subscription_id uuid not null references public.subscriptions (id) on delete cascade,
+  event_type text not null,
+  payload jsonb not null,
   status public."PaymentNotificationStatus" not null default 'PENDING',
   retry_count integer not null default 0 check (retry_count >= 0),
+  next_attempt_at timestamptz not null default now(),
+  locked_until timestamptz null,
   last_attempt_at timestamptz null,
   created_at timestamptz not null default now()
 );
 
-create index if not exists payment_notifications_status_created_at_idx
-  on public.payment_notifications (status, created_at);
+create index if not exists payment_notifications_status_next_attempt_at_idx
+  on public.payment_notifications (status, next_attempt_at);
 
 create or replace function public.handle_new_auth_user()
 returns trigger

@@ -4,9 +4,9 @@
 
 Sistema de Suscripciones es la base de backend para una empresa que lanzará un servicio de suscripciones premium. Su objetivo es soportar un servicio y un portal donde los usuarios puedan suscribirse a un plan, gestionar renovaciones y cancelaciones, consultar su suscripción actual y obtener o perder acceso a funcionalidades premium según sus permisos.
 
-Actualmente, el sistema permite autenticarse con Supabase, consultar suscripciones y activar un plan premium mediante un checkout con pago simulado. El checkout es idempotente y actualiza la suscripción, el acceso premium, el registro de pago y la notificación pendiente dentro de una transacción PostgreSQL.
+Actualmente, el sistema permite autenticarse con Supabase, consultar suscripciones y activar un plan premium mediante un checkout con pago simulado. El checkout es idempotente y actualiza la suscripción, el acceso premium, el registro de pago y la notificación pendiente dentro de una transacción PostgreSQL. Un worker de Transactional Outbox publica posteriormente la notificación externa simulada mediante consola.
 
-La cancelación, renovación, consulta de pagos y publicación asíncrona mediante Kafka permanecen pendientes. Los adaptadores externos continúan desacoplados mediante puertos de aplicación.
+La cancelación, renovación y consulta de pagos permanecen pendientes. La integración externa se simula mediante consola, como permite el ejercicio, y continúa desacoplada mediante un puerto de aplicación para poder reemplazarla por Kafka o un webhook.
 
 ## Stack Tecnológico
 
@@ -29,7 +29,7 @@ La cancelación, renovación, consulta de pagos y publicación asíncrona median
 src/
 |-- domain/          Entidades y errores de dominio
 |-- application/     Casos de uso, DTOs y puertos
-|-- infrastructure/  Prisma, configuración y adaptadores de Kafka y Resend
+|-- infrastructure/  Prisma, configuración, worker y adaptadores externos
 |-- presentation/    Controladores, middleware y rutas de Express
 |-- app.ts            Composición de la aplicación HTTP
 `-- main.ts           Punto de entrada del proceso
@@ -162,8 +162,14 @@ El checkout realiza atómicamente:
 - Actualización de la suscripción del usuario.
 - Habilitación de acceso premium.
 - Creación del registro de pago.
-- Creación de una notificación `PENDING` para el futuro worker/outbox.
+- Creación de una notificación `PENDING` para el worker/outbox.
 - Persistencia de la respuesta idempotente.
+
+El worker reclama notificaciones en lotes usando `FOR UPDATE SKIP LOCKED`, cambia su
+estado a `PROCESSING` y publica un evento estructurado mediante
+`ConsoleEventPublisher`. Si la publicación termina correctamente, marca la fila como
+`SENT`; si falla, aplica backoff exponencial y la devuelve a `PENDING`, o la marca como
+`FAILED` al alcanzar el máximo de intentos.
 
 Respuestas relevantes: `200`, `400`, `401`, `402`, `404`, `409`, `422` y `500`.
 
@@ -251,9 +257,9 @@ Swagger UI está disponible en `http://localhost:3000/docs` y el estado de salud
 | GET    | `/api/v1/subscriptions/:userId`  | Consulta administrativa por usuario |
 | GET    | `/api/v1/payments`               | Consultar registros de pagos        |
 
-Cancelación, renovación, consulta de pagos, publicación en Kafka y envío mediante Resend
-continúan como funcionalidades pendientes. Login, checkout y consulta de suscripciones
-ya están implementados.
+Cancelación, renovación y consulta de pagos continúan como funcionalidades pendientes.
+Login, checkout, consulta de suscripciones y notificación externa simulada ya están
+implementados.
 
 ## Prisma y Supabase
 
@@ -286,10 +292,16 @@ El pipeline futuro de CI/CD deberá:
 6. Desplegar primero en un entorno de staging.
 7. Ejecutar smoke tests y validaciones de migración antes de producción.
 
-Esta sección es una dirección arquitectónica provisional. Las políticas concretas de hosting, orquestación, rollback, migración y releases se actualizarán cuando los flujos de pagos, colas y notificaciones estén operativos.
+Esta sección es una dirección arquitectónica provisional. Las políticas concretas de hosting, orquestación, rollback, migración y releases se actualizarán al sustituir la integración simulada por infraestructura de producción.
 
-## Integraciones Pendientes
+## Integración Externa Simulada
 
-Los adaptadores de Kafka y Resend existen únicamente como placeholders comentados con `implement later`. Sus clientes todavía no están instalados ni inicializados.
+El ejercicio permite simular el servicio externo mediante una URL de webhook o consola.
+Esta implementación utiliza `ConsoleEventPublisher`: el checkout crea una fila
+`payment_notifications` dentro de la misma transacción y el worker la procesa fuera del
+camino síncrono de la solicitud.
 
-El checkout ya crea una fila `payment_notifications` con estado `PENDING` dentro de la misma transacción. El siguiente paso será implementar un worker de Transactional Outbox que lea esas filas, publique el evento en Kafka y actualice su estado a `SENT` o programe reintentos en caso de error.
+Las variables `OUTBOX_POLL_INTERVAL_MS`, `OUTBOX_BATCH_SIZE`,
+`OUTBOX_MAX_RETRIES` y `PAYMENT_NOTIFICATION_TOPIC` permiten configurar el worker.
+Kafka y Resend quedan como alternativas de producción; reemplazar el adaptador de consola
+no requiere modificar el caso de uso ni el checkout.

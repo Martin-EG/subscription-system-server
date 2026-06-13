@@ -1,4 +1,4 @@
-export type PaymentNotificationStatus = 'SENT' | 'PENDING' | 'FAILED';
+export type PaymentNotificationStatus = 'PENDING' | 'PROCESSING' | 'SENT' | 'FAILED';
 
 export interface PaymentNotification {
   id: string;
