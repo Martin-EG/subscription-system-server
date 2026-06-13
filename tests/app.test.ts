@@ -59,7 +59,6 @@ describe('HTTP application scaffold', () => {
     () => request(app).patch('/api/v1/subscriptions/cancel'),
     () => request(app).patch('/api/v1/subscriptions/renew'),
     () => request(app).get('/api/v1/subscriptions/user-placeholder'),
-    () => request(app).get('/api/v1/payments'),
   ];
 
   it.each(placeholderRequests)('returns 501 for a business endpoint', async (sendRequest) => {
@@ -70,6 +69,12 @@ describe('HTTP application scaffold', () => {
       title: 'Not Implemented',
       status: 501,
     });
+  });
+
+  it('requires authentication to list payment logs', async () => {
+    const response = await request(app).get('/api/v1/payments');
+
+    expect(response.status).toBe(401);
   });
 
   it('requires authentication to checkout a subscription', async () => {

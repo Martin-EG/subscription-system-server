@@ -15,7 +15,7 @@ describe('PrismaPaymentRepository', () => {
     transactionId: 'transaction-id',
   };
 
-  it('returns payment history ordered by newest first', async () => {
+  it('returns user payment history ordered by newest first', async () => {
     const findMany = jest.fn().mockResolvedValue([persistedPayment]);
     const prisma = {
       paymentLog: {
@@ -37,6 +37,33 @@ describe('PrismaPaymentRepository', () => {
       orderBy: {
         paymentDate: 'desc',
       },
+    });
+  });
+
+  it('returns payment history ordered by newest first', async () => {
+    const findMany = jest.fn();
+    const count = jest.fn();
+    const transaction = jest.fn().mockResolvedValue([[persistedPayment], 1]);
+    const prisma = {
+      paymentLog: {
+        findMany,
+        count,
+      },
+      $transaction: transaction,
+    };
+    const repository = new PrismaPaymentRepository(prisma as never);
+    const input = { page: 1, limit: 20 };
+
+    await expect(repository.findAll(input)).resolves.toEqual({
+      items: [{
+        ...persistedPayment,
+        amount: 99,
+      }],
+      total: 1
+    });
+    expect(findMany).toHaveBeenCalledWith({
+      skip: (input.page - 1) * input.limit,
+      take: input.limit,
     });
   });
 

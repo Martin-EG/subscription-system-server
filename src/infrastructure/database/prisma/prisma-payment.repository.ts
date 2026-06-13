@@ -1,3 +1,4 @@
+import { FindPaymentsQuery, PaymentsSearchResult } from '../../../application/dtos';
 import type { PaymentRepository } from '../../../application/ports';
 import type { PaymentLog } from '../../../domain/entities';
 import type { PrismaClient } from '../../../generated/prisma/client';
@@ -6,7 +7,7 @@ export class PrismaPaymentRepository implements PaymentRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
   async findByUserId(userId: string): Promise<PaymentLog[]> {
-    const records = await this.prisma.paymentLog.findMany({
+    const paymentLogs = await this.prisma.paymentLog.findMany({
       where: {
         userId,
       },
@@ -15,10 +16,28 @@ export class PrismaPaymentRepository implements PaymentRepository {
       },
     });
 
-    return records.map((record) => ({
-      ...record,
-      amount: record.amount.toNumber(),
+    return paymentLogs.map((paymentLog) => ({
+      ...paymentLog,
+      amount: paymentLog.amount.toNumber(),
     }));
+  }
+
+  async findAll({ page, limit }: FindPaymentsQuery): Promise<PaymentsSearchResult> {
+    const [items, total] = await this.prisma.$transaction([
+      this.prisma.paymentLog.findMany({
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      this.prisma.paymentLog.count()
+    ]);
+    
+    return {
+      items: items.map((paymentLog) => ({
+        ...paymentLog,
+        amount: paymentLog.amount.toNumber(),
+      })),
+      total
+    }
   }
 
   async save(payment: PaymentLog): Promise<void> {

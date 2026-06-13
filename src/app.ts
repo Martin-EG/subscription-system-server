@@ -6,6 +6,7 @@ import type {
   CheckoutTransactionPort,
   IdempotencyRepository,
   PaymentProcessor,
+  PaymentRepository,
   PlanRepository,
   SubscriptionRepository,
 } from './application/ports';
@@ -16,9 +17,10 @@ import { errorHandler } from './presentation/http/middlewares';
 import { openApiDocument } from './presentation/http/openapi.js';
 import {
   createAuthRouter,
-  healthRouter,
-  paymentRouter,
+  createPaymentRouter,
+  createPlansRouter,
   createSubscriptionRouter,
+  healthRouter,
 } from './presentation/http/routes';
 
 export interface AppDependencies {
@@ -26,6 +28,7 @@ export interface AppDependencies {
   checkoutTransaction: CheckoutTransactionPort;
   idempotencyRepository: IdempotencyRepository;
   paymentProcessor: PaymentProcessor;
+  paymentRepository: PaymentRepository;
   planRepository: PlanRepository;
   subscriptionRepository: SubscriptionRepository;
 }
@@ -48,6 +51,7 @@ export function createApp({
   checkoutTransaction,
   idempotencyRepository,
   paymentProcessor,
+  paymentRepository,
   planRepository,
   subscriptionRepository,
 }: AppDependencies) {
@@ -75,7 +79,20 @@ export function createApp({
       subscriptionRepository,
     }),
   );
-  app.use('/api/v1/payments', paymentRouter);
+  app.use(
+    '/api/v1/payments', 
+    createPaymentRouter({
+      authProvider, 
+      paymentRepository
+    })
+  );
+    app.use(
+    '/api/v1/plans', 
+    createPlansRouter({
+      authProvider, 
+      planRepository
+    })
+  );
   app.use(errorHandler);
 
   return app;
