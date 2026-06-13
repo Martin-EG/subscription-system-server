@@ -299,8 +299,11 @@ Swagger UI is available at `http://localhost:3000/docs` and health status at
 | GET    | `/api/v1/subscriptions/:userId`  | Admin query by user      |
 | GET    | `/api/v1/payments`               | Get payment logs         |
 
-Cancellation, renewal and payment-log queries remain pending. Login, checkout,
-subscription queries and simulated external notifications are implemented.
+Cancellation is scheduled at period end and premium access remains available until
+`expiresAt`. Renewal reuses the current plan for scheduled cancellations, `CANCELLED`,
+or `PAST_DUE` subscriptions and requires `paymentMethod` and `idempotencyKey`.
+Checkout, external payment-provider integration, Kafka publishing, and Resend delivery
+remain pending features.
 
 ## Prisma and Supabase
 

@@ -1,7 +1,8 @@
 import {
   checkoutSubscriptionSchema,
-  paginationSchema,
   idempotencyKeySchema,
+  paginationSchema,
+  renewSubscriptionBodySchema,
 } from '../../../../src/presentation/http/schemas/subscriptions.schemas';
 
 describe('paginationSchema', () => {
@@ -103,5 +104,36 @@ describe('idempotencyKeySchema', () => {
     const result = idempotencyKeySchema.safeParse(input);
 
     expect(result.success).toBe(false);
+  });
+});
+
+describe('renewSubscriptionBodySchema', () => {
+  it('accepts checkout-like renewal data', () => {
+    expect(
+      renewSubscriptionBodySchema.parse({
+        paymentMethod: 'pm_test',
+        idempotencyKey: 'renew-request-1',
+      }),
+    ).toEqual({
+      paymentMethod: 'pm_test',
+      idempotencyKey: 'renew-request-1',
+    });
+  });
+
+  it('rejects missing, short, or additional values', () => {
+    expect(renewSubscriptionBodySchema.safeParse({ paymentMethod: '' }).success).toBe(false);
+    expect(
+      renewSubscriptionBodySchema.safeParse({
+        paymentMethod: 'pm_test',
+        idempotencyKey: 'short',
+      }).success,
+    ).toBe(false);
+    expect(
+      renewSubscriptionBodySchema.safeParse({
+        paymentMethod: 'pm_test',
+        idempotencyKey: 'renew-request-1',
+        planId: 'must-not-be-selected',
+      }).success,
+    ).toBe(false);
   });
 });

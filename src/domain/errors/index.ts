@@ -1,3 +1,4 @@
+export * from './conflict.error';
 export * from './forbidden.error';
 export * from './idempotency-conflict.error';
 export * from './idempotency-in-progress.error';

@@ -25,7 +25,10 @@ describe('GetSubscriptionsUseCase', () => {
   function createRepository(overrides: Partial<SubscriptionRepository> = {}) {
     return {
       findCurrentByUserId: jest.fn(),
+      findRenewableByUserId: jest.fn(),
       findAll: jest.fn(),
+      scheduleCancellation: jest.fn(),
+      renew: jest.fn(),
       save: jest.fn(),
       ...overrides,
     } as jest.Mocked<SubscriptionRepository>;

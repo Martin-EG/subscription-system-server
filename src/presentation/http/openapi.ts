@@ -118,6 +118,19 @@ export const openApiDocument = {
           total: { type: 'integer', minimum: 0 },
         },
       },
+      SubscriptionMutation: {
+        type: 'object',
+        required: ['subscriptionId', 'status', 'expiresAt', 'cancelAtPeriodEnd'],
+        properties: {
+          subscriptionId: { type: 'string', format: 'uuid' },
+          status: {
+            type: 'string',
+            enum: ['ACTIVE', 'PAST_DUE', 'CANCELLED', 'EXPIRED'],
+          },
+          expiresAt: { type: ['string', 'null'], format: 'date-time' },
+          cancelAtPeriodEnd: { type: 'boolean' },
+        },
+      },
     },
   },
   paths: {
@@ -217,14 +230,57 @@ export const openApiDocument = {
     },
     '/api/v1/subscriptions/cancel': {
       patch: {
-        summary: 'Cancel the authenticated user subscription',
-        responses: { '501': { description: 'Placeholder' } },
+        summary: 'Cancel the authenticated user subscription at period end',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '200': {
+            description: 'Cancellation scheduled; premium access remains until expiresAt',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/SubscriptionMutation' },
+              },
+            },
+          },
+          '401': { description: 'Missing or invalid access token' },
+          '404': { description: 'Subscription not found' },
+          '409': { description: 'Subscription cannot be cancelled' },
+        },
       },
     },
     '/api/v1/subscriptions/renew': {
       patch: {
-        summary: 'Renew the authenticated user subscription',
-        responses: { '501': { description: 'Placeholder' } },
+        summary: 'Renew the authenticated user subscription using its current plan',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                additionalProperties: false,
+                required: ['paymentMethod', 'idempotencyKey'],
+                properties: {
+                  paymentMethod: { type: 'string', minLength: 1 },
+                  idempotencyKey: { type: 'string', minLength: 8 },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Subscription renewed with its existing plan',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/SubscriptionMutation' },
+              },
+            },
+          },
+          '400': { description: 'Invalid request body' },
+          '401': { description: 'Missing or invalid access token' },
+          '404': { description: 'Subscription not found' },
+          '409': { description: 'Subscription or idempotency conflict' },
+        },
       },
     },
     '/api/v1/subscriptions': {

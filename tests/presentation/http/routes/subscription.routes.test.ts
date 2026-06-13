@@ -86,9 +86,38 @@ function createDependencies() {
     }),
     findAll: jest.fn(),
   };
-  const subscriptionRepository: jest.Mocked<SubscriptionRepository> = {
-    findCurrentByUserId: jest.fn().mockResolvedValue(subscription),
+  const findCurrentByUserId = jest.fn().mockResolvedValue(subscription);
+  const renewableSubscription = {
+    subscriptionId: 'premium-subscription-id',
+    userId: 'user-id',
+    planId: 'premium-plan-id',
+    status: 'ACTIVE' as const,
+    startedAt: new Date('2026-06-12T00:00:00.000Z'),
+    expiresAt: new Date('2026-07-12T00:00:00.000Z'),
+    cancelAtPeriodEnd: false,
+    billingPeriod: 'MONTHLY' as const,
+    price: 99,
+    currency: 'MXN',
+  };
+  const findRenewableByUserId = jest.fn().mockResolvedValue(renewableSubscription);
+  const scheduleCancellation = jest.fn().mockResolvedValue({
+    subscriptionId: renewableSubscription.subscriptionId,
+    status: 'ACTIVE',
+    expiresAt: renewableSubscription.expiresAt,
+    cancelAtPeriodEnd: true,
+  });
+  const renew = jest.fn().mockResolvedValue({
+    subscriptionId: renewableSubscription.subscriptionId,
+    status: 'ACTIVE',
+    expiresAt: renewableSubscription.expiresAt,
+    cancelAtPeriodEnd: false,
+  });
+  const subscriptionRepository: SubscriptionRepository = {
+    findCurrentByUserId,
+    findRenewableByUserId,
     findAll: jest.fn(),
+    scheduleCancellation,
+    renew,
     save: jest.fn(),
   };
 
@@ -102,6 +131,10 @@ function createDependencies() {
     planId,
     processedAt,
     expiresAt,
+    findCurrentByUserId,
+    findRenewableByUserId,
+    scheduleCancellation,
+    renew,
   };
 }
 
@@ -220,5 +253,62 @@ describe('createSubscriptionRouter', () => {
         transactionId: 'transaction-id',
       }),
     );
+  });
+  
+  it('schedules cancellation for the authenticated user', async () => {
+    const { app, scheduleCancellation } = createApp();
+
+    const response = await request(app)
+      .patch('/subscriptions/cancel')
+      .set('Authorization', 'Bearer jwt-token');
+
+    expect(response.status).toBe(200);
+    expect(response.body).toMatchObject({
+      subscriptionId: 'premium-subscription-id',
+      cancelAtPeriodEnd: true,
+    });
+    expect(scheduleCancellation).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: 'user-id' }),
+    );
+  });
+
+  it('renews without accepting a plan selection', async () => {
+    const { app, findRenewableByUserId, renew } = createApp();
+    findRenewableByUserId.mockResolvedValueOnce({
+      ...(await findRenewableByUserId()),
+      status: 'PAST_DUE',
+    });
+
+    const response = await request(app)
+      .patch('/subscriptions/renew')
+      .set('Authorization', 'Bearer jwt-token')
+      .send({
+        paymentMethod: 'pm_test',
+        idempotencyKey: 'renew-request-1',
+      });
+
+    expect(response.status).toBe(200);
+    expect(renew).toHaveBeenCalledWith(
+      expect.objectContaining({
+        subscriptionId: 'premium-subscription-id',
+        userId: 'user-id',
+        idempotencyKey: 'renew-request-1',
+      }),
+    );
+  });
+
+  it('rejects renewal bodies that select a plan', async () => {
+    const { app } = createApp();
+
+    const response = await request(app)
+      .patch('/subscriptions/renew')
+      .set('Authorization', 'Bearer jwt-token')
+      .send({
+        paymentMethod: 'pm_test',
+        idempotencyKey: 'renew-request-1',
+        planId: 'another-plan-id',
+      });
+
+    expect(response.status).toBe(400);
   });
 });

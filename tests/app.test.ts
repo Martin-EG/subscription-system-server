@@ -38,7 +38,10 @@ describe('HTTP application scaffold', () => {
   };
   const subscriptionRepository: jest.Mocked<SubscriptionRepository> = {
     findCurrentByUserId: jest.fn(),
+    findRenewableByUserId: jest.fn(),
     findAll: jest.fn(),
+    scheduleCancellation: jest.fn(),
+    renew: jest.fn(),
     save: jest.fn(),
   };
   const app = createApp({
@@ -65,6 +68,7 @@ describe('HTTP application scaffold', () => {
   const placeholderRequests = [
     () => request(app).patch('/api/v1/subscriptions/cancel'),
     () => request(app).patch('/api/v1/subscriptions/renew'),
+    () => request(app).post('/api/v1/subscriptions/checkout'),
     () => request(app).get('/api/v1/subscriptions/user-placeholder'),
   ];
 

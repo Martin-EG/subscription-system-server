@@ -282,9 +282,7 @@ Swagger UI está disponible en `http://localhost:3000/docs` y el estado de salud
 | GET    | `/api/v1/subscriptions/:userId`  | Consulta administrativa por usuario |
 | GET    | `/api/v1/payments`               | Consultar registros de pagos        |
 
-Cancelación, renovación y consulta de pagos continúan como funcionalidades pendientes.
-Login, checkout, consulta de suscripciones y notificación externa simulada ya están
-implementados.
+La cancelación se programa al final del periodo y conserva el acceso premium hasta `expiresAt`. La renovación reutiliza el plan actual para suscripciones con cancelación programada, `CANCELLED` o `PAST_DUE`, y requiere `paymentMethod` e `idempotencyKey`. Checkout, la integración con un proveedor externo de pagos, publicación en Kafka y envío mediante Resend continúan como funcionalidades pendientes.
 
 ## Prisma y Supabase
 
