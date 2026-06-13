@@ -1,8 +1,29 @@
-import type { PaymentLog } from '../../domain/entities';
-import { NotImplementedError } from '../../domain/errors';
+import { ForbiddenError } from '../../domain/errors';
+import type { AuthenticatedUser, FindPaymentsQuery, PaginatedPaymentsOutput } from '../dtos';
+import type { PaymentRepository } from '../ports';
+
+interface GetSubscriptionsInput {
+  currentUser: AuthenticatedUser;
+  page: number;
+  limit: number;
+}
+
 
 export class GetPaymentLogsUseCase {
-  execute(_userId?: string): Promise<PaymentLog[]> {
-    return Promise.reject(new NotImplementedError('Payment log queries'));
+  constructor(private readonly paymentRepository: PaymentRepository) {}
+
+  async execute({ currentUser, page, limit }: GetSubscriptionsInput): Promise<PaginatedPaymentsOutput> {
+    if(currentUser.role !== 'ADMIN') {
+      throw new ForbiddenError();
+    }
+    
+    const { items, total } = await this.paymentRepository.findAll({ page, limit });
+
+    return {
+      data: items,
+      total,
+      page,
+      limit
+    }
   }
 }
