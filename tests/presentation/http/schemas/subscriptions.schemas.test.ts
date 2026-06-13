@@ -1,7 +1,7 @@
 import {
-  checkoutSubscriptionSchema, 
+  checkoutSubscriptionSchema,
   paginationSchema,
-  idempotencyKeySchema
+  idempotencyKeySchema,
 } from '../../../../src/presentation/http/schemas/subscriptions.schemas';
 
 describe('paginationSchema', () => {
@@ -32,42 +32,52 @@ describe('paginationSchema', () => {
 describe('checkoutSubscriptionSchema', () => {
   const query = {
     planId: '550e8400-e29b-41d4-a716-446655440000',
-    paymentMethod: 'debit-card'
+    paymentMethod: 'debit-card',
   };
 
   it('rejects when payment method is empty', () => {
-    expect(checkoutSubscriptionSchema.safeParse({
-      ...query,
-      paymentMethod: null
-    }).success).toBe(false);
+    expect(
+      checkoutSubscriptionSchema.safeParse({
+        ...query,
+        paymentMethod: null,
+      }).success,
+    ).toBe(false);
   });
 
   it('rejects when payment method is not the expected type', () => {
-    expect(checkoutSubscriptionSchema.safeParse({
-      ...query,
-      paymentMethod: 5
-    }).success).toBe(false);
+    expect(
+      checkoutSubscriptionSchema.safeParse({
+        ...query,
+        paymentMethod: 5,
+      }).success,
+    ).toBe(false);
   });
 
   it('rejects when planId is empty', () => {
-    expect(checkoutSubscriptionSchema.safeParse({
-      ...query,
-      planId: null
-    }).success).toBe(false);
+    expect(
+      checkoutSubscriptionSchema.safeParse({
+        ...query,
+        planId: null,
+      }).success,
+    ).toBe(false);
   });
 
   it('rejects when plan id is not the expected type', () => {
-    expect(checkoutSubscriptionSchema.safeParse({
-      ...query,
-      planId: 'not-an-uuid'
-    }).success).toBe(false);
+    expect(
+      checkoutSubscriptionSchema.safeParse({
+        ...query,
+        planId: 'not-an-uuid',
+      }).success,
+    ).toBe(false);
   });
 
-    it('rejects when plan id is not a UUID', () => {
-    expect(checkoutSubscriptionSchema.safeParse({
-      ...query,
-      planId: 5
-    }).success).toBe(false);
+  it('rejects when plan id is not a UUID', () => {
+    expect(
+      checkoutSubscriptionSchema.safeParse({
+        ...query,
+        planId: 5,
+      }).success,
+    ).toBe(false);
   });
 
   it('accepts valid data with the correct type', () => {
@@ -85,10 +95,10 @@ describe('idempotencyKeySchema', () => {
   it.each([
     ['empty key', ''],
     ['whitespace only', '  '],
-    ['more than 255 characters', 'a'.repeat(256) ],
+    ['more than 255 characters', 'a'.repeat(256)],
     ['number', 123],
     ['undefined', undefined],
-    ['null', null]
+    ['null', null],
   ])('rejects %s', (_case, input) => {
     const result = idempotencyKeySchema.safeParse(input);
 

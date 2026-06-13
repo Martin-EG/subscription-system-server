@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash } from 'node:crypto';
 
 interface CheckoutHashInput {
   planId: string;
@@ -10,4 +10,4 @@ export const createCheckoutRequestHash: CreateCheckoutRequestHash = ({ planId, p
   const payload = JSON.stringify({ planId, paymentMethod });
 
   return createHash('sha256').update(payload).digest('hex');
-}
+};

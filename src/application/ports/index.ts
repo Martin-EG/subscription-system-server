@@ -1,6 +1,6 @@
 export * from './auth-provider.port';
 export * from './checkout-transaction.port';
-export * from  './event-publisher.port';
+export * from './event-publisher.port';
 export * from './idempotency-repository.port';
 export * from './notification-sender.port';
 export * from './payment-processor.port';

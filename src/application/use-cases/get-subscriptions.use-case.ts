@@ -1,10 +1,10 @@
-import { NotFoundError } from "../../domain/errors";
-import type { 
-  AuthenticatedUser, 
-  SubscriptionDetailsOutput, 
-  PaginatedSubscriptionsOutput
-} from "../dtos";
-import type { SubscriptionRepository } from "../ports";
+import { NotFoundError } from '../../domain/errors';
+import type {
+  AuthenticatedUser,
+  SubscriptionDetailsOutput,
+  PaginatedSubscriptionsOutput,
+} from '../dtos';
+import type { SubscriptionRepository } from '../ports';
 
 interface GetSubscriptionsInput {
   currentUser: AuthenticatedUser;
@@ -12,32 +12,30 @@ interface GetSubscriptionsInput {
   limit: number;
 }
 
-type GetSubscriptionsOutput = 
-  | SubscriptionDetailsOutput
-  | PaginatedSubscriptionsOutput;
+type GetSubscriptionsOutput = SubscriptionDetailsOutput | PaginatedSubscriptionsOutput;
 
 export class GetSubscriptionsUseCase {
-  constructor(
-    private readonly subscriptionRepository: SubscriptionRepository
-  ) {}
+  constructor(private readonly subscriptionRepository: SubscriptionRepository) {}
 
-  async execute(
-    { currentUser, page, limit }: GetSubscriptionsInput
-  ): Promise<GetSubscriptionsOutput> {
-    if(currentUser.role === 'ADMIN') {
+  async execute({
+    currentUser,
+    page,
+    limit,
+  }: GetSubscriptionsInput): Promise<GetSubscriptionsOutput> {
+    if (currentUser.role === 'ADMIN') {
       const { items, total } = await this.subscriptionRepository.findAll({ page, limit });
 
-      return { 
+      return {
         data: items,
         total,
         page,
-        limit
-      }
+        limit,
+      };
     }
 
     const subscription = await this.subscriptionRepository.findCurrentByUserId(currentUser.id);
 
-    if(!subscription) {
+    if (!subscription) {
       throw new NotFoundError('Subscription');
     }
 
