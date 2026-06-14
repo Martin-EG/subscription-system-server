@@ -1,5 +1,5 @@
 import { ForbiddenError } from '../../domain/errors';
-import type { AuthenticatedUser, FindPaymentsQuery, PaginatedPaymentsOutput } from '../dtos';
+import type { AuthenticatedUser, PaginatedPaymentsOutput } from '../dtos';
 import type { PaymentRepository } from '../ports';
 
 interface GetSubscriptionsInput {

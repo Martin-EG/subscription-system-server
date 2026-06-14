@@ -1,5 +1,5 @@
 import type { RequestHandler } from 'express';
-import { GetPlansUseCase } from '../../../application/use-cases/get-plans.use-case';
+import type { GetPlansUseCase } from '../../../application/use-cases/get-plans.use-case';
 import { paginationSchema } from '../schemas';
 
 export function createPlanController(getPlansUseCase: GetPlansUseCase): RequestHandler {

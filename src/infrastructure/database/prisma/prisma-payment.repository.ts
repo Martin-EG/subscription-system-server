@@ -1,4 +1,4 @@
-import { FindPaymentsQuery, PaymentsSearchResult } from '../../../application/dtos';
+import type { FindPaymentsQuery, PaymentsSearchResult } from '../../../application/dtos';
 import type { PaymentRepository } from '../../../application/ports';
 import type { PaymentLog } from '../../../domain/entities';
 import type { PrismaClient } from '../../../generated/prisma/client';

@@ -1,7 +1,9 @@
-import type { AuthenticatedUser, PaginatedPaymentsOutput } from '../../../src/application/dtos';
+import type { AuthenticatedUser } from '../../../src/application/dtos';
 import type { PaymentRepository } from '../../../src/application/ports';
 import { GetPaymentLogsUseCase } from '../../../src/application/use-cases';
 import { ForbiddenError } from '../../../src/domain/errors';
+
+/* eslint-disable @typescript-eslint/unbound-method -- Jest replaces port methods with mock functions. */
 
 describe('GetPaymentLogsUseCase', () => {
   function createRepository(overrides: Partial<PaymentRepository> = {}) {

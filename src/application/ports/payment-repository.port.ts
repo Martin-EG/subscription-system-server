@@ -1,5 +1,5 @@
 import type { PaymentLog } from '../../domain/entities';
-import { FindPaymentsQuery, PaymentsSearchResult } from '../dtos';
+import type { FindPaymentsQuery, PaymentsSearchResult } from '../dtos';
 
 export interface PaymentRepository {
   findByUserId(userId: string): Promise<PaymentLog[]>;

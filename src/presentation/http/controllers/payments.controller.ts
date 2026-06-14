@@ -1,7 +1,7 @@
 import type { RequestHandler } from 'express';
-import { GetPaymentLogsUseCase } from '../../../application/use-cases/get-payment-logs.use-case';
+import type { GetPaymentLogsUseCase } from '../../../application/use-cases/get-payment-logs.use-case';
 import { paginationSchema } from '../schemas';
-import { AuthenticatedUser } from '../../../application/dtos';
+import type { AuthenticatedUser } from '../../../application/dtos';
 
 export function createPaymentLogsController(
   getPaymentLogsUseCase: GetPaymentLogsUseCase,

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { AuthProvider, PaymentRepository } from '../../../application/ports';
+import type { AuthProvider, PaymentRepository } from '../../../application/ports';
 import { GetPaymentLogsUseCase } from '../../../application/use-cases/get-payment-logs.use-case.js';
 import { authenticate } from '../middlewares/authenticate.middleware.js';
 import { createPaymentLogsController } from '../controllers/payments.controller.js';

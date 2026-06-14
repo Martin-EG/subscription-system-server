@@ -1,7 +1,7 @@
 import express from 'express';
 import request from 'supertest';
-import { PaginatedPlansOutput } from '../../../../src/application/dtos';
-import { GetPlansUseCase } from '../../../../src/application/use-cases/get-plans.use-case';
+import type { PaginatedPlansOutput } from '../../../../src/application/dtos';
+import type { GetPlansUseCase } from '../../../../src/application/use-cases/get-plans.use-case';
 import { createPlanController } from '../../../../src/presentation/http/controllers';
 import { errorHandler } from '../../../../src/presentation/http/middlewares';
 

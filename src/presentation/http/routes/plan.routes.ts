@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { AuthProvider, PlanRepository } from '../../../application/ports';
+import type { AuthProvider, PlanRepository } from '../../../application/ports';
 import { authenticate } from '../middlewares/authenticate.middleware.js';
 import { createPlanController } from '../controllers';
 import { GetPlansUseCase } from '../../../application/use-cases/get-plans.use-case';
